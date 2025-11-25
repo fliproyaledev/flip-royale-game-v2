@@ -1,0 +1,57 @@
+{
+  "undefined": {
+    "id": "undefined",
+    "totalPoints": 0,
+    "bankPoints": 0,
+    "logs": [],
+    "updatedAt": "2025-11-15T14:24:01.245Z"
+  },
+  "1762813916380": {
+    "id": "1762813916380",
+    "totalPoints": 0,
+    "bankPoints": 97500,
+    "logs": [
+      {
+        "type": "system",
+        "date": "2025-11-10",
+        "bonusGranted": 100000,
+        "note": "admin-grant"
+      },
+      {
+        "type": "system",
+        "date": "2025-11-10",
+        "dailyDelta": 0,
+        "note": "duel-entry-duel_mhtpwbew_oh7sol"
+      },
+      {
+        "type": "system",
+        "date": "2025-11-10",
+        "bonusGranted": 2500,
+        "note": "duel-cancel-refund-duel_mhtpwbew_oh7sol"
+      },
+      {
+        "type": "system",
+        "date": "2025-11-11",
+        "dailyDelta": 0,
+        "note": "duel-entry-duel_mhuzpzl5_cfqu1v"
+      }
+    ],
+    "updatedAt": "2025-11-15T14:24:01.245Z"
+
+  },
+  "user_1763218017811": {
+    "id": "user_1763218017811",
+    "totalPoints": 0,
+    "bankPoints": 45000,
+    "giftPoints": 50000,
+    "logs": [
+      {
+        "type": "system",
+        "date": "2025-11-15",
+        "dailyDelta": 0,
+        "note": "purchase-mystery-pack"
+      }
+    ],
+    "updatedAt": "2025-11-15T15:43:41.925Z"
+  }
+}

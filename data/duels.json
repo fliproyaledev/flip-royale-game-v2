@@ -1,0 +1,378 @@
+{
+
+  "duel_20251115_1": {
+    "id": "duel_20251115_1",
+    "createdAt": "2025-11-15T11:13:56.324Z",
+    "baseDay": "2025-11-15",
+    "evalAt": "2025-11-16T00:00:00.000Z",
+    "entryCost": 2500,
+    "status": "open",
+    "host": {
+      "userId": "system",
+      "entryPaid": false,
+      "locked": false,
+      "picks": []
+    },
+    "seq": 1
+  },
+  "duel_20251115_2": {
+    "id": "duel_20251115_2",
+    "createdAt": "2025-11-15T11:13:56.324Z",
+    "baseDay": "2025-11-15",
+    "evalAt": "2025-11-16T00:00:00.000Z",
+    "entryCost": 2500,
+    "status": "open",
+    "host": {
+      "userId": "system",
+      "entryPaid": false,
+      "locked": false,
+      "picks": []
+    },
+    "seq": 2
+  },
+  "duel_20251115_3": {
+    "id": "duel_20251115_3",
+    "createdAt": "2025-11-15T11:13:56.324Z",
+    "baseDay": "2025-11-15",
+    "evalAt": "2025-11-16T00:00:00.000Z",
+    "entryCost": 2500,
+    "status": "open",
+    "host": {
+      "userId": "system",
+      "entryPaid": false,
+      "locked": false,
+      "picks": []
+    },
+    "seq": 3
+  },
+  "duel_20251115_4": {
+    "id": "duel_20251115_4",
+    "createdAt": "2025-11-15T11:13:56.324Z",
+    "baseDay": "2025-11-15",
+    "evalAt": "2025-11-16T00:00:00.000Z",
+    "entryCost": 2500,
+    "status": "open",
+    "host": {
+      "userId": "system",
+      "entryPaid": false,
+      "locked": false,
+      "picks": []
+    },
+    "seq": 4
+  },
+  "duel_20251115_5": {
+    "id": "duel_20251115_5",
+    "createdAt": "2025-11-15T11:13:56.324Z",
+    "baseDay": "2025-11-15",
+    "evalAt": "2025-11-16T00:00:00.000Z",
+    "entryCost": 2500,
+    "status": "open",
+    "host": {
+      "userId": "system",
+      "entryPaid": false,
+      "locked": false,
+      "picks": []
+    },
+    "seq": 5
+  },
+  "duel_20251115_6": {
+    "id": "duel_20251115_6",
+    "createdAt": "2025-11-15T11:13:56.324Z",
+    "baseDay": "2025-11-15",
+    "evalAt": "2025-11-16T00:00:00.000Z",
+    "entryCost": 2500,
+    "status": "open",
+    "host": {
+      "userId": "system",
+      "entryPaid": false,
+      "locked": false,
+      "picks": []
+    },
+    "seq": 6
+  },
+  "duel_20251115_7": {
+    "id": "duel_20251115_7",
+    "createdAt": "2025-11-15T11:13:56.324Z",
+    "baseDay": "2025-11-15",
+    "evalAt": "2025-11-16T00:00:00.000Z",
+    "entryCost": 2500,
+    "status": "open",
+    "host": {
+      "userId": "system",
+      "entryPaid": false,
+      "locked": false,
+      "picks": []
+    },
+    "seq": 7
+  },
+  "duel_20251115_8": {
+    "id": "duel_20251115_8",
+    "createdAt": "2025-11-15T11:13:56.324Z",
+    "baseDay": "2025-11-15",
+    "evalAt": "2025-11-16T00:00:00.000Z",
+    "entryCost": 2500,
+    "status": "open",
+    "host": {
+      "userId": "system",
+      "entryPaid": false,
+      "locked": false,
+      "picks": []
+    },
+    "seq": 8
+  },
+  "duel_20251115_9": {
+    "id": "duel_20251115_9",
+    "createdAt": "2025-11-15T11:13:56.324Z",
+    "baseDay": "2025-11-15",
+    "evalAt": "2025-11-16T00:00:00.000Z",
+    "entryCost": 2500,
+    "status": "open",
+    "host": {
+      "userId": "system",
+      "entryPaid": false,
+      "locked": false,
+      "picks": []
+    },
+    "seq": 9
+  },
+  "duel_20251115_10": {
+    "id": "duel_20251115_10",
+    "createdAt": "2025-11-15T11:13:56.324Z",
+    "baseDay": "2025-11-15",
+    "evalAt": "2025-11-16T00:00:00.000Z",
+    "entryCost": 2500,
+    "status": "open",
+    "host": {
+      "userId": "system",
+      "entryPaid": false,
+      "locked": false,
+      "picks": []
+    },
+    "seq": 10
+  },
+  "duel_20251115_11": {
+    "id": "duel_20251115_11",
+    "createdAt": "2025-11-15T11:13:56.324Z",
+    "baseDay": "2025-11-15",
+    "evalAt": "2025-11-16T00:00:00.000Z",
+    "entryCost": 2500,
+    "status": "open",
+    "host": {
+      "userId": "system",
+      "entryPaid": false,
+      "locked": false,
+      "picks": []
+    },
+    "seq": 11
+  },
+  "duel_20251115_12": {
+    "id": "duel_20251115_12",
+    "createdAt": "2025-11-15T11:13:56.324Z",
+    "baseDay": "2025-11-15",
+    "evalAt": "2025-11-16T00:00:00.000Z",
+    "entryCost": 2500,
+    "status": "open",
+    "host": {
+      "userId": "system",
+      "entryPaid": false,
+      "locked": false,
+      "picks": []
+    },
+    "seq": 12
+  },
+  "duel_20251115_13": {
+    "id": "duel_20251115_13",
+    "createdAt": "2025-11-15T11:13:56.324Z",
+    "baseDay": "2025-11-15",
+    "evalAt": "2025-11-16T00:00:00.000Z",
+    "entryCost": 2500,
+    "status": "open",
+    "host": {
+      "userId": "system",
+      "entryPaid": false,
+      "locked": false,
+      "picks": []
+    },
+    "seq": 13
+  },
+  "duel_20251115_14": {
+    "id": "duel_20251115_14",
+    "createdAt": "2025-11-15T11:13:56.324Z",
+    "baseDay": "2025-11-15",
+    "evalAt": "2025-11-16T00:00:00.000Z",
+    "entryCost": 2500,
+    "status": "open",
+    "host": {
+      "userId": "system",
+      "entryPaid": false,
+      "locked": false,
+      "picks": []
+    },
+    "seq": 14
+  },
+  "duel_20251115_15": {
+    "id": "duel_20251115_15",
+    "createdAt": "2025-11-15T11:13:56.324Z",
+    "baseDay": "2025-11-15",
+    "evalAt": "2025-11-16T00:00:00.000Z",
+    "entryCost": 2500,
+    "status": "open",
+    "host": {
+      "userId": "system",
+      "entryPaid": false,
+      "locked": false,
+      "picks": []
+    },
+    "seq": 15
+  },
+  "duel_20251115_16": {
+    "id": "duel_20251115_16",
+    "createdAt": "2025-11-15T11:13:56.324Z",
+    "baseDay": "2025-11-15",
+    "evalAt": "2025-11-16T00:00:00.000Z",
+    "entryCost": 2500,
+    "status": "open",
+    "host": {
+      "userId": "system",
+      "entryPaid": false,
+      "locked": false,
+      "picks": []
+    },
+    "seq": 16
+  },
+  "duel_20251115_17": {
+    "id": "duel_20251115_17",
+    "createdAt": "2025-11-15T11:13:56.324Z",
+    "baseDay": "2025-11-15",
+    "evalAt": "2025-11-16T00:00:00.000Z",
+    "entryCost": 2500,
+    "status": "open",
+    "host": {
+      "userId": "system",
+      "entryPaid": false,
+      "locked": false,
+      "picks": []
+    },
+    "seq": 17
+  },
+  "duel_20251115_18": {
+    "id": "duel_20251115_18",
+    "createdAt": "2025-11-15T11:13:56.324Z",
+    "baseDay": "2025-11-15",
+    "evalAt": "2025-11-16T00:00:00.000Z",
+    "entryCost": 2500,
+    "status": "open",
+    "host": {
+      "userId": "system",
+      "entryPaid": false,
+      "locked": false,
+      "picks": []
+    },
+    "seq": 18
+  },
+  "duel_20251115_19": {
+    "id": "duel_20251115_19",
+    "createdAt": "2025-11-15T11:13:56.324Z",
+    "baseDay": "2025-11-15",
+    "evalAt": "2025-11-16T00:00:00.000Z",
+    "entryCost": 2500,
+    "status": "open",
+    "host": {
+      "userId": "system",
+      "entryPaid": false,
+      "locked": false,
+      "picks": []
+    },
+    "seq": 19
+  },
+  "duel_20251115_20": {
+    "id": "duel_20251115_20",
+    "createdAt": "2025-11-15T11:13:56.324Z",
+    "baseDay": "2025-11-15",
+    "evalAt": "2025-11-16T00:00:00.000Z",
+    "entryCost": 2500,
+    "status": "open",
+    "host": {
+      "userId": "system",
+      "entryPaid": false,
+      "locked": false,
+      "picks": []
+    },
+    "seq": 20
+  },
+  "duel_20251115_21": {
+    "id": "duel_20251115_21",
+    "createdAt": "2025-11-15T11:13:56.324Z",
+    "baseDay": "2025-11-15",
+    "evalAt": "2025-11-16T00:00:00.000Z",
+    "entryCost": 2500,
+    "status": "open",
+    "host": {
+      "userId": "system",
+      "entryPaid": false,
+      "locked": false,
+      "picks": []
+    },
+    "seq": 21
+  },
+  "duel_20251115_22": {
+    "id": "duel_20251115_22",
+    "createdAt": "2025-11-15T11:13:56.324Z",
+    "baseDay": "2025-11-15",
+    "evalAt": "2025-11-16T00:00:00.000Z",
+    "entryCost": 2500,
+    "status": "open",
+    "host": {
+      "userId": "system",
+      "entryPaid": false,
+      "locked": false,
+      "picks": []
+    },
+    "seq": 22
+  },
+  "duel_20251115_23": {
+    "id": "duel_20251115_23",
+    "createdAt": "2025-11-15T11:13:56.324Z",
+    "baseDay": "2025-11-15",
+    "evalAt": "2025-11-16T00:00:00.000Z",
+    "entryCost": 2500,
+    "status": "open",
+    "host": {
+      "userId": "system",
+      "entryPaid": false,
+      "locked": false,
+      "picks": []
+    },
+    "seq": 23
+  },
+  "duel_20251115_24": {
+    "id": "duel_20251115_24",
+    "createdAt": "2025-11-15T11:13:56.324Z",
+    "baseDay": "2025-11-15",
+    "evalAt": "2025-11-16T00:00:00.000Z",
+    "entryCost": 2500,
+    "status": "open",
+    "host": {
+      "userId": "system",
+      "entryPaid": false,
+      "locked": false,
+      "picks": []
+    },
+    "seq": 24
+  },
+  "duel_20251115_25": {
+    "id": "duel_20251115_25",
+    "createdAt": "2025-11-15T11:13:56.324Z",
+    "baseDay": "2025-11-15",
+    "evalAt": "2025-11-16T00:00:00.000Z",
+    "entryCost": 2500,
+    "status": "open",
+    "host": {
+      "userId": "system",
+      "entryPaid": false,
+      "locked": false,
+      "picks": []
+    },
+    "seq": 25
+  }
+}
