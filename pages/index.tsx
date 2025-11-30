@@ -237,25 +237,25 @@ export default function Home() {
   }
 
   function loginUser(userData: any, isNewUser = false) {
+    console.log('[LOGIN] loginUser called:', { isNewUser, userId: userData.id });
+
     localStorage.setItem('flipflop-user', JSON.stringify({
       id: userData.id,
       username: userData.name || userData.username,
       avatar: userData.avatar
     }))
 
-    // Fix Infinite Reload: Only reload if strictly necessary, or just update state
-    // For new users, we MUST NOT reload to show the modal
+    // CRITICAL FIX: Never use window.location.reload() - it causes infinite loops
+    // Always update state directly for smooth user experience
+    setUser(userData)
+
     if (isNewUser) {
-      setUser(userData)
+      console.log('[LOGIN] New user detected, showing welcome gift');
       setShowWelcomeGift(true)
-      loadUserData() // Load initial data without reload
-    } else {
-      // For existing users, reload is safer to ensure fresh state, 
-      // BUT check if we are already logged in to avoid loop
-      if (!user) {
-        window.location.reload()
-      }
     }
+
+    // Load user data regardless of new/existing status
+    loadUserData()
   }
 
   function resetPersistentState() {
