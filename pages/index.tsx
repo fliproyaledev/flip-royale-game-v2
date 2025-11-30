@@ -118,7 +118,7 @@ export default function Home() {
   const [isRegisteringLoading, setIsRegisteringLoading] = useState(false)
   const [regUsername, setRegUsername] = useState('')
   const [regError, setRegError] = useState('')
-  const [showWelcomeGift, setShowWelcomeGift] = useState(false) // Welcome Gift State
+  const [showWelcomeGift, setShowWelcomeGift] = useState(false) // Welcome Gift Modal State
 
   // --- ZAMAN VE FINALIZING KONTROLÜ ---
   const [now, setNow] = useState(Date.now())
@@ -2778,44 +2778,4 @@ export default function Home() {
               </p>
             </div>
             <div style={{ padding: 24, background: '#1e293b' }}>
-              <img src="/common-pack.jpg" alt="Common Pack" style={{ width: 120, borderRadius: 12, marginBottom: 20, boxShadow: '0 8px 24px rgba(0,0,0,0.4)' }} />
-              <button
-                className="btn"
-                onClick={() => {
-                  setShowWelcomeGift(false);
-                  setModalOpen({ open: true, type: 'pack' }); // Open pack immediately
-                  // Trigger pack opening logic if needed, or let user click "Open" in pack modal
-                  // For better UX, let's just close this and let them see the inventory or auto-open
-                  // But user asked to "open pack", so let's simulate opening or guide them
-                  buyMysteryPacks('common', true); // true = free/gift open (need to support this in function or just call open API)
-                  // Actually, buyMysteryPacks handles purchase. We just want to OPEN.
-                  // Since we added it to inventory, we should use a function to OPEN it.
-                  // Let's assume buyMysteryPacks handles "buy and open" or we need a separate open flow.
-                  // For now, let's just close this and show the Pack Opening animation if possible.
-                  // Simpler: Just close this modal and call the pack opening modal with 'common' type
-                  setModalOpen({ open: true, type: 'pack' });
-                  // We need to set the pack type to open
-                  // Since the existing modal logic might be complex, let's just guide them to inventory or auto-open
-                }}
-                style={{
-                  width: '100%',
-                  background: 'linear-gradient(135deg, #10b981, #059669)',
-                  border: 'none',
-                  padding: '14px',
-                  borderRadius: 12,
-                  color: 'white',
-                  fontWeight: 800,
-                  fontSize: 16,
-                  cursor: 'pointer',
-                  boxShadow: '0 4px 12px rgba(16, 185, 129, 0.3)'
-                }}
-              >
-                Open My Gift!
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-    </div >
-  )
 }
