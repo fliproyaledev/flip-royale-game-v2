@@ -2778,4 +2778,33 @@ export default function Home() {
               </p>
             </div>
             <div style={{ padding: 24, background: '#1e293b' }}>
+              <img src="/common-pack.jpg" alt="Common Pack" style={{ width: 120, borderRadius: 12, marginBottom: 20, boxShadow: '0 8px 24px rgba(0,0,0,0.4)' }} />
+              <button
+                className="btn"
+                onClick={() => {
+                  setShowWelcomeGift(false);
+                  // Open the free pack from inventory
+                  buyMysteryPacks('common', true); // true = use inventory (free gift)
+                }}
+                style={{
+                  width: '100%',
+                  background: 'linear-gradient(135deg, #10b981, #059669)',
+                  border: 'none',
+                  padding: '14px',
+                  borderRadius: 12,
+                  color: 'white',
+                  fontWeight: 800,
+                  fontSize: 16,
+                  cursor: 'pointer',
+                  boxShadow: '0 4px 12px rgba(16, 185, 129, 0.3)'
+                }}
+              >
+                Open My Gift!
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  )
 }
