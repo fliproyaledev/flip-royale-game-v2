@@ -10,7 +10,7 @@ import type { Token } from './tokens'
 
 // ESKİ IMPORTLAR SİLİNDİ (Dexscreener/Gecko)
 // YENİ IMPORT: Fiyatı Redis'ten okuyan fonksiyon
-import { getPriceForToken } from './price' 
+import { getPriceForToken } from './price'
 
 import {
   getOrCreateUser,
@@ -32,7 +32,7 @@ export type DuelPick = {
   tokenId: string
   direction: 'up' | 'down'
   // Network/Pair artık zorunlu değil çünkü Oracle yönetiyor, ama tip uyumu için opsiyonel bırakabiliriz
-  network?: string 
+  network?: string
   pair?: string
   locked: boolean
   lockedAt?: string
@@ -83,14 +83,14 @@ export async function loadDuels(): Promise<Record<string, DuelRoom>> {
   try {
     const kv = await loadDuelsKV()
     if (kv && Object.keys(kv).length > 0) return kv
-  } catch {}
+  } catch { }
 
   try {
     ensureDir()
     if (!fs.existsSync(FILE)) return {}
     const raw = fs.readFileSync(FILE, 'utf8')
     const json = JSON.parse(raw)
-    await saveDuelsKV(json).catch(() => {})
+    await saveDuelsKV(json).catch(() => { })
     return json
   } catch {
     return {}
@@ -98,12 +98,12 @@ export async function loadDuels(): Promise<Record<string, DuelRoom>> {
 }
 
 export async function saveDuels(map: Record<string, DuelRoom>): Promise<void> {
-  await saveDuelsKV(map).catch(() => {})
+  await saveDuelsKV(map).catch(() => { })
   if (IS_VERCEL) return
   try {
     ensureDir()
     fs.writeFileSync(FILE, JSON.stringify(map, null, 2), 'utf8')
-  } catch {}
+  } catch { }
 }
 
 // ---------------------
@@ -129,10 +129,10 @@ async function currentSignedPctFor(
   token: Token,
   direction: 'up' | 'down'
 ): Promise<{ pct: number; network?: string; pair?: string } | null> {
-  
+
   // YENİ MANTIK: Direkt Redis Cache'den (Oracle'dan) oku
   const priceData = await getPriceForToken(token.id)
-  
+
   // Eğer veri yoksa veya hata varsa null dön
   if (!priceData || priceData.source.startsWith('fallback')) return null
 
@@ -140,12 +140,12 @@ async function currentSignedPctFor(
   if (typeof pct !== 'number') return null
 
   const signed = direction === 'up' ? pct : -pct
-  
+
   // Network/Pair bilgisini de priceData'dan alıp dönüyoruz
-  return { 
-    pct: signed, 
-    network: priceData.dexNetwork, 
-    pair: priceData.dexPair 
+  return {
+    pct: signed,
+    network: priceData.dexNetwork,
+    pair: priceData.dexPair
   }
 }
 
@@ -232,10 +232,10 @@ export async function setPicks(roomId: string, userId: string, picks: DuelPickIn
 
   const side =
     room.host.userId === userId
-      ? room.host 
+      ? room.host
       : room.guest?.userId === userId
-      ? room.guest 
-      : null
+        ? room.guest
+        : null
 
   if (!side) throw new Error('Not a participant')
   if (!side.entryPaid) throw new Error('Entry not paid')
@@ -243,10 +243,10 @@ export async function setPicks(roomId: string, userId: string, picks: DuelPickIn
   const lockedMap = new Map<string, DuelPick>()
   side.picks.forEach(pk => pk.locked && lockedMap.set(pk.tokenId, pk))
 
-  for (const id of lockedMap.keys()) {
+  lockedMap.forEach((_, id) => {
     if (!picks.find(p => p.tokenId === id))
       throw new Error('Cannot remove locked pick')
-  }
+  })
 
   side.picks = picks.map(p =>
     lockedMap.get(p.tokenId)
@@ -277,10 +277,10 @@ export async function lockPicks(
 
   const side =
     room.host.userId === userId
-      ? room.host 
+      ? room.host
       : room.guest?.userId === userId
-      ? room.guest
-      : null
+        ? room.guest
+        : null
 
   if (!side) throw new Error('Not a participant')
   if (!side.entryPaid) throw new Error('Entry not paid')

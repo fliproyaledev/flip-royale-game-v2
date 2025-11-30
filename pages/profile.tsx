@@ -1,14 +1,14 @@
 import { useEffect, useState, ChangeEvent } from 'react'
 import { useRouter } from 'next/router'
 import ThemeToggle from '../components/ThemeToggle'
+import { useDisconnect } from 'wagmi'
 
 const DEFAULT_AVATAR = '/avatars/default-avatar.png'
 
-// User tipi güncellendi
 type User = {
   id: string
-  username?: string // Opsiyonel yaptık
-  name?: string    // Opsiyonel yaptık
+  username: string
+  name?: string
   walletAddress?: string
   createdAt: string | number
   lastLogin: string | number
@@ -31,8 +31,10 @@ type RoundHistory = {
   totalPoints: number
 }
 
-export default function Profile(){
+export default function Profile() {
   const router = useRouter()
+  const { disconnect } = useDisconnect()
+
   const [user, setUser] = useState<User | null>(null)
   const [history, setHistory] = useState<RoundHistory[]>([])
   const [mounted, setMounted] = useState(false)
@@ -41,37 +43,35 @@ export default function Profile(){
 
   useEffect(() => {
     setMounted(true)
-    
+
     async function load() {
-        const savedUser = localStorage.getItem('flipflop-user')
-        let userId = ''
-        if (savedUser) {
-            try { userId = JSON.parse(savedUser).id } catch {}
+      const savedUser = localStorage.getItem('flipflop-user')
+      let userId = ''
+      if (savedUser) {
+        try { userId = JSON.parse(savedUser).id } catch { }
+      }
+      if (!userId) {
+        window.location.href = '/auth'
+        return
+      }
+
+      try {
+        const r = await fetch(`/api/users/me?userId=${encodeURIComponent(userId)}`)
+        const j = await r.json()
+        if (j.ok && j.user) {
+          setUser(j.user)
+          if (Array.isArray(j.user.roundHistory)) {
+            const mappedHistory = j.user.roundHistory.map((h: any) => ({
+              dayKey: h.date,
+              totalPoints: h.totalPoints,
+              items: h.items || []
+            }))
+            setHistory(mappedHistory)
+          }
         }
-        if (!userId) {
-             window.location.href = '/auth'
-             return
-        }
-        
-        try {
-            const r = await fetch(`/api/users/me?userId=${encodeURIComponent(userId)}`)
-            const j = await r.json()
-            if (j.ok && j.user) {
-                setUser(j.user)
-                
-                // History Dönüştürme
-                if (Array.isArray(j.user.roundHistory)) {
-                    const mappedHistory = j.user.roundHistory.map((h: any) => ({
-                        dayKey: h.date,
-                        totalPoints: h.totalPoints,
-                        items: h.items || [] 
-                    }))
-                    setHistory(mappedHistory)
-                }
-            }
-        } catch(e) { console.error(e) } finally {
-            setLoading(false)
-        }
+      } catch (e) { console.error(e) } finally {
+        setLoading(false)
+      }
     }
     load()
   }, [])
@@ -80,9 +80,9 @@ export default function Profile(){
     const file = e.target.files?.[0]
     if (!file || !user) return
 
-    if (file.size > 1 * 1024 * 1024) { 
-        alert("File is too large. Please choose an image under 1MB.")
-        return
+    if (file.size > 1 * 1024 * 1024) {
+      alert("File is too large. Please choose an image under 1MB.")
+      return
     }
 
     setIsUploading(true)
@@ -90,57 +90,61 @@ export default function Profile(){
     const reader = new FileReader()
     reader.readAsDataURL(file)
     reader.onloadend = async () => {
-        const base64data = reader.result as string
+      const base64data = reader.result as string
 
-        try {
-            const res = await fetch('/api/users/update-avatar', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ userId: user.id, avatarData: base64data })
-            })
-            
-            const data = await res.json()
-            if (data.ok) {
-                setUser({ ...user, avatar: base64data })
-                const saved = localStorage.getItem('flipflop-user')
-                if (saved) {
-                    const parsed = JSON.parse(saved)
-                    localStorage.setItem('flipflop-user', JSON.stringify({ ...parsed, avatar: base64data }))
-                }
-            } else {
-                alert("Failed to update avatar: " + (data.error || 'Unknown error'))
-            }
-        } catch (error) {
-            console.error("Avatar update error:", error)
-            alert("An error occurred while uploading.")
-        } finally {
-            setIsUploading(false)
+      try {
+        const res = await fetch('/api/users/update-avatar', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId: user.id, avatarData: base64data })
+        })
+
+        const data = await res.json()
+        if (data.ok) {
+          setUser({ ...user, avatar: base64data })
+          const saved = localStorage.getItem('flipflop-user')
+          if (saved) {
+            const parsed = JSON.parse(saved)
+            localStorage.setItem('flipflop-user', JSON.stringify({ ...parsed, avatar: base64data }))
+          }
+        } else {
+          alert("Failed to update avatar: " + (data.error || 'Unknown error'))
         }
+      } catch (error) {
+        console.error("Avatar update error:", error)
+        alert("An error occurred while uploading.")
+      } finally {
+        setIsUploading(false)
+      }
     }
+  }
+
+  const handleLogout = () => {
+    disconnect()
+    try {
+      localStorage.removeItem('flipflop-user')
+      localStorage.removeItem('flipflop-next')
+      localStorage.removeItem('flipflop-next-saved')
+      localStorage.removeItem('flipflop-last-settled-day')
+    } catch { }
+    window.location.href = '/auth'
   }
 
   if (!mounted || loading) {
     return (
-        <div className="app" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '80vh' }}>
-            <div className="muted">Loading profile...</div>
-        </div>
+      <div className="app" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '80vh' }}>
+        <div className="muted">Loading profile...</div>
+      </div>
     )
   }
 
   if (!user) return null
 
-  // --- GÜÇLENDİRİLMİŞ İSİM SEÇİMİ ---
-  // 1. user.username varsa onu kullan
-  // 2. user.name varsa onu kullan
-  // 3. Hiçbiri yoksa user.id'nin ilk 8 karakterini kullan
-  // 4. O da yoksa 'Unknown Player' de.
-  const displayName = user.username || user.name || (user.id ? user.id.substring(0,8) : 'Unknown Player')
-
+  const displayName = user.username || user.name || (user.id ? user.id.substring(0, 8) : 'Unknown Player')
   const totalPoints = user.totalPoints || 0
   const totalRounds = user.currentRound ? user.currentRound - 1 : 0
   const averagePoints = totalRounds > 0 ? Math.round(totalPoints / totalRounds) : 0
-  
-  const cardsCollected = user.inventory 
+  const cardsCollected = user.inventory
     ? Object.values(user.inventory).reduce((sum: number, count: any) => sum + Number(count), 0)
     : 0
   const packsOpened = Math.ceil(cardsCollected / 5)
@@ -169,7 +173,7 @@ export default function Profile(){
           <a className="tab" href="/history">HISTORY</a>
           <a className="tab active" href="/profile">PROFILE</a>
         </nav>
-        <div style={{display: 'flex', alignItems: 'center', gap: 12, marginLeft: 'auto'}}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginLeft: 'auto' }}>
           <ThemeToggle />
           <div style={{
             width: 44,
@@ -187,16 +191,13 @@ export default function Profile(){
             <img
               src={user.avatar || DEFAULT_AVATAR}
               alt={displayName}
-              style={{width: '100%', height: '100%', objectFit: 'cover'}}
+              style={{ width: '100%', height: '100%', objectFit: 'cover' }}
               onError={(e) => { (e.currentTarget as HTMLImageElement).src = DEFAULT_AVATAR }}
             />
           </div>
-          
+
           <button
-            onClick={() => {
-              localStorage.removeItem('flipflop-user')
-              window.location.href = '/auth'
-            }}
+            onClick={handleLogout}
             className="btn"
             style={{
               background: 'rgba(239,68,68,0.2)',
@@ -211,157 +212,74 @@ export default function Profile(){
 
       <div className="panel">
         <h2>Profile</h2>
-        
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
-          gap: 20,
-          marginBottom: 30
-        }}>
-          {/* Basic Info */}
-          <div style={{
-            background: 'var(--card-2)',
-            padding: 24,
-            borderRadius: 16,
-            border: '1px solid var(--border)'
-          }}>
-            <h3 style={{marginBottom: 16, fontSize: 18, fontWeight: 700}}>Account Information</h3>
-            <div style={{display: 'flex', flexDirection: 'column', gap: 12}}>
-              <div style={{display:'flex', alignItems:'center', gap:16}}>
-                <div style={{width:72, height:72, borderRadius:'50%', overflow:'hidden', border:'3px solid var(--border)', boxShadow:'var(--card-shadow)'}}>
-                  <img
-                    src={user.avatar || DEFAULT_AVATAR}
-                    alt="Avatar"
-                    style={{width:'100%', height:'100%', objectFit:'cover'}}
-                    onError={(e)=>{ (e.currentTarget as HTMLImageElement).src = DEFAULT_AVATAR }}
-                  />
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 20, marginBottom: 30 }}>
+          <div style={{ background: 'var(--card-2)', padding: 24, borderRadius: 16, border: '1px solid var(--border)' }}>
+            <h3 style={{ marginBottom: 16, fontSize: 18, fontWeight: 700 }}>Account Information</h3>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+                <div style={{ width: 72, height: 72, borderRadius: '50%', overflow: 'hidden', border: '3px solid var(--border)', boxShadow: 'var(--card-shadow)' }}>
+                  <img src={user.avatar || DEFAULT_AVATAR} alt="Avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={(e) => { (e.currentTarget as HTMLImageElement).src = DEFAULT_AVATAR }} />
                 </div>
                 <div>
-                  <label className={`btn primary ${isUploading ? 'disabled' : ''}`} style={{display:'inline-block', cursor: isUploading ? 'not-allowed' : 'pointer', fontSize:13, padding:'8px 16px', opacity: isUploading ? 0.7 : 1}}>
+                  <label className={`btn primary ${isUploading ? 'disabled' : ''}`} style={{ display: 'inline-block', cursor: isUploading ? 'not-allowed' : 'pointer', fontSize: 13, padding: '8px 16px', opacity: isUploading ? 0.7 : 1 }}>
                     {isUploading ? 'Uploading...' : 'Change Photo'}
-                    <input
-                        type="file"
-                        accept="image/*"
-                        disabled={isUploading}
-                        style={{display:'none'}}
-                        onChange={handleAvatarChange}
-                    />
+                    <input type="file" accept="image/*" disabled={isUploading} style={{ display: 'none' }} onChange={handleAvatarChange} />
                   </label>
                 </div>
               </div>
-              <div>
-                <div className="muted" style={{marginBottom: 4}}>Username</div>
-                {/* DÜZELTİLEN İSİM ALANI */}
-                <div style={{fontSize: 16, fontWeight: 600}}>{displayName}</div>
+              <div><div className="muted" style={{ marginBottom: 4 }}>Username</div><div style={{ fontSize: 16, fontWeight: 600 }}>{displayName}</div></div>
+              <div><div className="muted" style={{ marginBottom: 4 }}>Member Since</div><div style={{ fontSize: 16, fontWeight: 600 }}>{user.createdAt ? new Date(user.createdAt).toLocaleDateString() : '-'}</div></div>
+            </div>
+          </div>
+          <div style={{ background: 'var(--card-2)', padding: 24, borderRadius: 16, border: '1px solid var(--border)' }}>
+            <h3 style={{ marginBottom: 16, fontSize: 18, fontWeight: 700 }}>Game Statistics</h3>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+              <div className="stat-row" style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 16px', background: 'var(--card)', borderRadius: 12 }}>
+                <div className="muted">Total Points</div><div className="points good" style={{ fontSize: 20 }}>{totalPoints.toLocaleString()}</div>
               </div>
-              <div>
-                <div className="muted" style={{marginBottom: 4}}>Member Since</div>
-                <div style={{fontSize: 16, fontWeight: 600}}>
-                  {user.createdAt ? new Date(user.createdAt).toLocaleDateString() : '-'}
-                </div>
+              <div className="stat-row" style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 16px', background: 'var(--card)', borderRadius: 12 }}>
+                <div className="muted">Rounds Played</div><div style={{ fontSize: 20, fontWeight: 700 }}>{totalRounds}</div>
+              </div>
+              <div className="stat-row" style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 16px', background: 'var(--card)', borderRadius: 12 }}>
+                <div className="muted">Average Points</div><div style={{ fontSize: 20, fontWeight: 700 }}>{averagePoints.toLocaleString()}</div>
+              </div>
+              <div className="stat-row" style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 16px', background: 'var(--card)', borderRadius: 12 }}>
+                <div className="muted">Packs Opened</div><div style={{ fontSize: 20, fontWeight: 700 }}>{packsOpened}</div>
+              </div>
+              <div className="stat-row" style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 16px', background: 'var(--card)', borderRadius: 12 }}>
+                <div className="muted">Cards Collected</div><div style={{ fontSize: 20, fontWeight: 700 }}>{cardsCollected}</div>
               </div>
             </div>
           </div>
-
-           {/* Game Statistics */}
-           <div style={{
-             background: 'var(--card-2)',
-             padding: 24,
-             borderRadius: 16,
-             border: '1px solid var(--border)'
-           }}>
-             <h3 style={{marginBottom: 16, fontSize: 18, fontWeight: 700}}>Game Statistics</h3>
-             <div style={{display: 'flex', flexDirection: 'column', gap: 16}}>
-               
-               <div className="stat-row" style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 16px', background: 'var(--card)', borderRadius: 12 }}>
-                 <div className="muted">Total Points</div>
-                 <div className="points good" style={{ fontSize: 20 }}>{totalPoints.toLocaleString()}</div>
-               </div>
-
-               <div className="stat-row" style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 16px', background: 'var(--card)', borderRadius: 12 }}>
-                 <div className="muted">Rounds Played</div>
-                 <div style={{ fontSize: 20, fontWeight: 700 }}>{totalRounds}</div>
-               </div>
-
-               <div className="stat-row" style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 16px', background: 'var(--card)', borderRadius: 12 }}>
-                 <div className="muted">Average Points</div>
-                 <div style={{ fontSize: 20, fontWeight: 700 }}>{averagePoints.toLocaleString()}</div>
-               </div>
-
-               <div className="stat-row" style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 16px', background: 'var(--card)', borderRadius: 12 }}>
-                 <div className="muted">Packs Opened</div>
-                 <div style={{ fontSize: 20, fontWeight: 700 }}>{packsOpened}</div>
-               </div>
-
-               <div className="stat-row" style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 16px', background: 'var(--card)', borderRadius: 12 }}>
-                 <div className="muted">Cards Collected</div>
-                 <div style={{ fontSize: 20, fontWeight: 700 }}>{cardsCollected}</div>
-               </div>
-
-             </div>
-           </div>
         </div>
-
-        {/* Round History */}
         <div>
-          <h3 style={{marginBottom: 20, fontSize: 18, fontWeight: 700}}>Round History</h3>
+          <h3 style={{ marginBottom: 20, fontSize: 18, fontWeight: 700 }}>Round History</h3>
           {history.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: 40, borderRadius: 12, border: '2px dashed var(--border)', color: 'var(--muted-inv)' }}>
-              No rounds played yet. Start playing to see your history!
-            </div>
+            <div style={{ textAlign: 'center', padding: 40, borderRadius: 12, border: '2px dashed var(--border)', color: 'var(--muted-inv)' }}>No rounds played yet. Start playing to see your history!</div>
           ) : (
-            <div style={{display: 'flex', flexDirection: 'column', gap: 16}}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
               {history.slice().reverse().map((round, index) => {
                 const roundTotal = round.totalPoints || 0
-                const picks = Array.isArray(round.items) ? round.items : [] 
+                const picks = Array.isArray(round.items) ? round.items : []
                 const roundNumber = history.length - index
-                
                 return (
-                <div key={round.dayKey} style={{
-                  background: 'var(--card-2)',
-                  padding: 20,
-                  borderRadius: 12,
-                  border: '1px solid var(--border)'
-                }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                      <div className="badge">Round #{roundNumber}</div>
-                      <div style={{fontSize: 16, fontWeight: 600}}>{new Date(round.dayKey).toLocaleDateString()}</div>
+                  <div key={round.dayKey} style={{ background: 'var(--card-2)', padding: 20, borderRadius: 12, border: '1px solid var(--border)' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}><div className="badge">Round #{roundNumber}</div><div style={{ fontSize: 16, fontWeight: 600 }}>{new Date(round.dayKey).toLocaleDateString()}</div></div>
+                      <div className={`points ${roundTotal >= 0 ? 'good' : 'bad'}`} style={{ fontSize: 18 }}>{roundTotal > 0 ? '+' : ''}{roundTotal.toLocaleString()} pts</div>
                     </div>
-                    <div className={`points ${roundTotal >= 0 ? 'good' : 'bad'}`} style={{fontSize: 18}}>
-                      {roundTotal > 0 ? '+' : ''}{roundTotal.toLocaleString()} pts
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                      {picks.map((pick: any, pickIndex: number) => (
+                        <div key={pickIndex} style={{ background: 'var(--card)', padding: '8px 12px', borderRadius: 8, fontSize: 14, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}>
+                          <span className={pick.dir === 'UP' ? 'dir-up' : 'dir-down'} style={{ fontSize: 10, padding: '2px 6px', borderRadius: 4 }}>{pick.dir === 'UP' ? '▲' : '▼'}</span>
+                          <span>${pick.symbol}</span>
+                          {pick.duplicateIndex > 1 && (<span style={{ background: 'rgba(0,0,0,0.3)', padding: '2px 6px', borderRadius: 4, fontSize: 10 }}>x{pick.duplicateIndex}</span>)}
+                          <span className={pick.points >= 0 ? 'points good' : 'points bad'} style={{ fontSize: 12, marginTop: 0 }}>{pick.points > 0 ? '+' : ''}{pick.points}</span>
+                        </div>
+                      ))}
                     </div>
                   </div>
-                  
-                  <div style={{display: 'flex', flexWrap: 'wrap', gap: 8}}>
-                    {picks.map((pick: any, pickIndex: number) => (
-                      <div key={pickIndex} style={{
-                        background: 'var(--card)',
-                        padding: '8px 12px',
-                        borderRadius: 8,
-                        fontSize: 14,
-                        fontWeight: 600,
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 6
-                      }}>
-                        <span className={pick.dir === 'UP' ? 'dir-up' : 'dir-down'} style={{fontSize: 10, padding: '2px 6px', borderRadius: 4}}>
-                          {pick.dir === 'UP' ? '▲' : '▼'}
-                        </span>
-                        <span>${pick.symbol}</span>
-                        {pick.duplicateIndex > 1 && (
-                          <span style={{ background: 'rgba(0,0,0,0.3)', padding: '2px 6px', borderRadius: 4, fontSize: 10 }}>
-                            x{pick.duplicateIndex}
-                          </span>
-                        )}
-                        <span className={pick.points >= 0 ? 'points good' : 'points bad'} style={{fontSize: 12, marginTop:0}}>
-                          {pick.points > 0 ? '+' : ''}{pick.points}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )
+                )
               })}
             </div>
           )}

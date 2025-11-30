@@ -21,7 +21,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       ts: now,
       source: 'test',
       network: token.dexscreenerNetwork || 'base',
-      pair: token.dexscreenerPair || null
+      pair: token.dexscreenerPair || undefined
     })
   }
 

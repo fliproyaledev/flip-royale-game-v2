@@ -55,12 +55,12 @@
 /* Light Mode - PREMIUM AYARLAR (Burayı komple değiştir) */
 [data-theme="light"] {
   /* Arka planı yumuşatan katman */
-  --bg-overlay: rgba(255, 255, 255, 0.75); 
+  --bg-overlay: rgba(255, 255, 255, 0.1);
 
   /* Paneller: Kırık Beyaz/Mint */
   --panel-bg: linear-gradient(180deg, rgba(248, 252, 250, 0.95), rgba(240, 250, 245, 0.9));
   --topbar-bg: rgba(255, 255, 255, 0.95);
-  
+
   /* Kartlar: Beyaz */
   --card: #ffffff;
   --card-2: #f8fafc;
@@ -70,8 +70,8 @@
   --card-shadow: 0 4px 20px rgba(0, 0, 0, 0.05), 0 1px 4px rgba(0, 0, 0, 0.02);
 
   /* Metinler: SİYAH/KOYU YEŞİL (Okunabilirlik için şart) */
-  --text-inv: #022c22; 
-  --muted-inv: #064e3b; 
+  --text-inv: #022c22;
+  --muted-inv: #064e3b;
   --text-primary: #022c22;
   --text-secondary: rgba(2, 44, 34, 0.9);
   --text-muted: rgba(6, 78, 59, 0.8);
@@ -313,7 +313,8 @@ a {
 [data-theme="light"] .badge {
   background: rgba(6, 78, 59, 0.06) !important;
   border: 1px solid rgba(6, 78, 59, 0.15) !important;
-  color: #065f46 !important; /* Koyu yeşil */
+  color: #065f46 !important;
+  /* Koyu yeşil */
   box-shadow: none;
 }
 
@@ -645,11 +646,21 @@ a {
   font-size: 22px;
 }
 
-.points.good { color: #86efac; }
-.points.bad { color: #fca5a5; }
+.points.good {
+  color: #86efac;
+}
 
-[data-theme="light"] .points.good { color: #16a34a; }
-[data-theme="light"] .points.bad { color: #dc2626; }
+.points.bad {
+  color: #fca5a5;
+}
+
+[data-theme="light"] .points.good {
+  color: #16a34a;
+}
+
+[data-theme="light"] .points.bad {
+  color: #dc2626;
+}
 
 .capbar {
   height: 7px;
@@ -659,7 +670,7 @@ a {
   margin-top: 9px;
 }
 
-.capbar > span {
+.capbar>span {
   display: block;
   height: 100%;
   background: linear-gradient(90deg, #06b6d4, #22c55e);
@@ -700,7 +711,7 @@ a {
   background: #ffffff;
   border-color: var(--border);
   color: #022c22;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
 }
 
 .inv-card:hover {
@@ -711,7 +722,7 @@ a {
 
 [data-theme="light"] .inv-card:hover {
   border-color: rgba(6, 78, 59, 0.2);
-  box-shadow: 0 8px 24px rgba(0,0,0,0.08);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
 }
 
 .inv-count {
@@ -796,26 +807,66 @@ a {
 }
 
 @keyframes pulse {
-  0% { opacity: 0.6; transform: translate(-50%, -50%) scale(1); }
-  50% { opacity: 1; transform: translate(-50%, -50%) scale(1.1); }
-  100% { opacity: 0.6; transform: translate(-50%, -50%) scale(1); }
+  0% {
+    opacity: 0.6;
+    transform: translate(-50%, -50%) scale(1);
+  }
+
+  50% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1.1);
+  }
+
+  100% {
+    opacity: 0.6;
+    transform: translate(-50%, -50%) scale(1);
+  }
 }
 
 @keyframes pack-pop {
-  0% { transform: scale(0.85); opacity: 0; }
-  60% { transform: scale(1.06); opacity: 1; }
-  100% { transform: scale(1); opacity: 1; }
+  0% {
+    transform: scale(0.85);
+    opacity: 0;
+  }
+
+  60% {
+    transform: scale(1.06);
+    opacity: 1;
+  }
+
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
 }
 
 @keyframes tear-move {
-  0% { transform: translateY(-15px) rotate(-3deg); opacity: 0; }
-  70% { transform: translateY(0) rotate(0deg); opacity: 1; }
-  100% { transform: translateY(0) rotate(0deg); opacity: 1; }
+  0% {
+    transform: translateY(-15px) rotate(-3deg);
+    opacity: 0;
+  }
+
+  70% {
+    transform: translateY(0) rotate(0deg);
+    opacity: 1;
+  }
+
+  100% {
+    transform: translateY(0) rotate(0deg);
+    opacity: 1;
+  }
 }
 
 @keyframes card-fly-in {
-  0% { transform: translateY(30px) scale(0.9); opacity: 0; }
-  100% { transform: translateY(0) scale(1); opacity: 1; }
+  0% {
+    transform: translateY(30px) scale(0.9);
+    opacity: 0;
+  }
+
+  100% {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
 }
 
 .modal-backdrop {
@@ -909,7 +960,7 @@ a {
 /* Leaderboard Table */
 /* Sadece 3 sütun: Rank(70px) - Player(Esnek) - Points(150px) */
 .leaderboard-header {
-  grid-template-columns: 70px 1fr 150px; 
+  grid-template-columns: 70px 1fr 150px;
   padding: 12px 16px;
   background: var(--table-header-bg);
   border-radius: 12px 12px 0 0;
@@ -919,14 +970,14 @@ a {
 }
 
 [data-theme="light"] .leaderboard-header {
-    color: #475569;
-    background: #f1f5f9;
+  color: #475569;
+  background: #f1f5f9;
 }
 
 .leaderboard-row {
   display: grid;
   /* Sadece 3 sütun: Rank(70px) - Player(Esnek) - Points(150px) */
-  grid-template-columns: 70px 1fr 150px; 
+  grid-template-columns: 70px 1fr 150px;
   padding: 16px;
   border-bottom: 1px solid var(--border);
   align-items: center;
@@ -934,17 +985,44 @@ a {
   transition: background 0.2s;
 }
 
-.leaderboard-row:hover { background: var(--table-row-hover); }
-.leaderboard-row:last-child { border-bottom: none; }
+.leaderboard-row:hover {
+  background: var(--table-row-hover);
+}
+
+.leaderboard-row:last-child {
+  border-bottom: none;
+}
 
 /* Rank Colors */
-.rank-1 { color: #fbbf24; text-shadow: 0 0 10px rgba(251,191,36,0.4); }
-.rank-2 { color: #e2e8f0; text-shadow: 0 0 10px rgba(226,232,240,0.4); }
-.rank-3 { color: #d97706; text-shadow: 0 0 10px rgba(217,119,6,0.4); }
+.rank-1 {
+  color: #fbbf24;
+  text-shadow: 0 0 10px rgba(251, 191, 36, 0.4);
+}
 
-[data-theme="light"] .rank-1 { color: #d97706; text-shadow: none; }
-[data-theme="light"] .rank-2 { color: #64748b; text-shadow: none; }
-[data-theme="light"] .rank-3 { color: #b45309; text-shadow: none; }
+.rank-2 {
+  color: #e2e8f0;
+  text-shadow: 0 0 10px rgba(226, 232, 240, 0.4);
+}
+
+.rank-3 {
+  color: #d97706;
+  text-shadow: 0 0 10px rgba(217, 119, 6, 0.4);
+}
+
+[data-theme="light"] .rank-1 {
+  color: #d97706;
+  text-shadow: none;
+}
+
+[data-theme="light"] .rank-2 {
+  color: #64748b;
+  text-shadow: none;
+}
+
+[data-theme="light"] .rank-3 {
+  color: #b45309;
+  text-shadow: none;
+}
 
 /* Dropdown select */
 select option {
@@ -960,10 +1038,11 @@ select option {
 /* Prices Page Chart Fix */
 [data-theme="light"] .recharts-cartesian-grid-horizontal line,
 [data-theme="light"] .recharts-cartesian-grid-vertical line {
-    stroke: rgba(0,0,0,0.05);
+  stroke: rgba(0, 0, 0, 0.05);
 }
+
 [data-theme="light"] .recharts-text {
-    fill: #64748b !important;
+  fill: #64748b !important;
 }
 
 /* Mobile Responsive */
@@ -972,52 +1051,95 @@ select option {
     grid-template-columns: 1fr !important;
     gap: 12px !important;
   }
-  .main-grid > aside {
+
+  .main-grid>aside {
     position: relative !important;
     top: auto !important;
     order: 3;
   }
-  .main-grid > div:first-child { order: 1; }
-  .main-grid > div:nth-child(2) { order: 2; }
+
+  .main-grid>div:first-child {
+    order: 1;
+  }
+
+  .main-grid>div:nth-child(2) {
+    order: 2;
+  }
 }
 
 @media (max-width: 768px) {
-  .app { padding: 12px 8px; }
-  .topbar { padding: 10px 12px; flex-wrap: wrap; }
-  .topbar > div:last-child { margin-left: 0 !important; width: 100%; justify-content: center; }
-  .picks { grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)) !important; }
-  .modal-grid { grid-template-columns: repeat(3, 1fr); }
-  
-  /* Leaderboard Mobile */
-  .leaderboard-header, .leaderboard-row {
-    grid-template-columns: 50px 1.5fr 1fr !important; 
-    font-size: 12px; padding: 10px; gap: 8px;
+  .app {
+    padding: 12px 8px;
   }
-  .leaderboard-header > div:nth-last-child(1),
-  .leaderboard-header > div:nth-last-child(2),
-  .leaderboard-row > div:nth-last-child(1),
-  .leaderboard-row > div:nth-last-child(2) { display: none; }
-  
+
+  .topbar {
+    padding: 10px 12px;
+    flex-wrap: wrap;
+  }
+
+  .topbar>div:last-child {
+    margin-left: 0 !important;
+    width: 100%;
+    justify-content: center;
+  }
+
+  .picks {
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)) !important;
+  }
+
+  .modal-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  /* Leaderboard Mobile */
+  .leaderboard-header,
+  .leaderboard-row {
+    grid-template-columns: 50px 1.5fr 1fr !important;
+    font-size: 12px;
+    padding: 10px;
+    gap: 8px;
+  }
+
+  .leaderboard-header>div:nth-last-child(1),
+  .leaderboard-header>div:nth-last-child(2),
+  .leaderboard-row>div:nth-last-child(1),
+  .leaderboard-row>div:nth-last-child(2) {
+    display: none;
+  }
+
   /* Prices Page Mobile */
   .price-row {
     grid-template-columns: 1fr !important;
     gap: 12px !important;
     padding: 12px !important;
   }
-  .price-row > div:first-child { grid-column: 1 / -1; }
-  .price-row > div:not(:first-child) {
-    display: flex; justify-content: space-between; padding: 8px 0;
-    border-bottom: 1px solid rgba(255,255,255,0.1);
+
+  .price-row>div:first-child {
+    grid-column: 1 / -1;
   }
-  [data-theme="light"] .price-row > div:not(:first-child) {
-      border-bottom: 1px solid rgba(0,0,0,0.05);
+
+  .price-row>div:not(:first-child) {
+    display: flex;
+    justify-content: space-between;
+    padding: 8px 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  [data-theme="light"] .price-row>div:not(:first-child) {
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
   }
 }
 
 @media (max-width: 480px) {
-  .picks { grid-template-columns: 1fr !important; }
-  .modal-grid { grid-template-columns: repeat(2, 1fr); }
+  .picks {
+    grid-template-columns: 1fr !important;
+  }
+
+  .modal-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
 }
+
 /* =================================================================
    LIGHT MODE İÇİN ACİL GÖRÜNÜRLÜK YAMASI (KESİN ÇÖZÜM)
    ================================================================= */
@@ -1031,17 +1153,20 @@ select option {
 [data-theme="light"] .panel h3,
 [data-theme="light"] .panel label,
 [data-theme="light"] .panel li {
-  color: #0f172a !important; /* Koyu Lacivert/Siyah */
-  opacity: 1 !important;      /* Saydamlığı iptal et */
+  color: #0f172a !important;
+  /* Koyu Lacivert/Siyah */
+  opacity: 1 !important;
+  /* Saydamlığı iptal et */
   text-shadow: none !important;
 }
 
 /* 2. SOLUK YAZILARI (Member Since vb.) GÖRÜNÜR GRİ YAP */
 /* Normalde beyaz ve %50 opak olan yazıları düzeltir */
 [data-theme="light"] .muted,
-[data-theme="light"] div[style*="rgba(255,255,255"], 
+[data-theme="light"] div[style*="rgba(255,255,255"],
 [data-theme="light"] span[style*="rgba(255,255,255"] {
-  color: #475569 !important; /* Okunabilir Gri */
+  color: #475569 !important;
+  /* Okunabilir Gri */
   opacity: 1 !important;
 }
 
@@ -1065,18 +1190,19 @@ select option {
 
 /* Kırmızı Butonlar (Logout vb.) Kırmızı Kalsın */
 [data-theme="light"] .btn[style*="rgba(239,68,68"] {
-   color: #dc2626 !important;
+  color: #dc2626 !important;
 }
 
 /* Yeşil/Kırmızı Puanlar ve Rozetler */
 [data-theme="light"] .points.good,
 [data-theme="light"] .badge,
 [data-theme="light"] .dir-up {
-    color: #16a34a !important;
+  color: #16a34a !important;
 }
+
 [data-theme="light"] .points.bad,
 [data-theme="light"] .dir-down {
-    color: #dc2626 !important;
+  color: #dc2626 !important;
 }
 
 /* Logo Rengini Bozma */
@@ -1084,4 +1210,262 @@ select option {
 [data-theme="light"] .brand svg path {
   fill: initial !important;
   stroke: initial !important;
+}
+
+/* Utility Classes for forcing colors on dark cards in Light Mode */
+/* Increased specificity to override [data-theme="light"] selectors */
+html[data-theme="light"] .app .text-force-white {
+  color: #ffffff !important;
+}
+
+/* Dropdown select */
+select option {
+  background: #1a1a1a !important;
+  color: white !important;
+}
+
+[data-theme="light"] select option {
+  background: #ffffff !important;
+  color: #000 !important;
+}
+
+/* Prices Page Chart Fix */
+[data-theme="light"] .recharts-cartesian-grid-horizontal line,
+[data-theme="light"] .recharts-cartesian-grid-vertical line {
+  stroke: rgba(0, 0, 0, 0.05);
+}
+
+[data-theme="light"] .recharts-text {
+  fill: #64748b !important;
+}
+
+/* Mobile Responsive */
+@media (max-width: 1024px) {
+  .main-grid {
+    grid-template-columns: 1fr !important;
+    gap: 12px !important;
+  }
+
+  .main-grid>aside {
+    position: relative !important;
+    top: auto !important;
+    order: 3;
+  }
+
+  .main-grid>div:first-child {
+    order: 1;
+  }
+
+  .main-grid>div:nth-child(2) {
+    order: 2;
+  }
+}
+
+@media (max-width: 768px) {
+  .app {
+    padding: 12px 8px;
+  }
+
+  .topbar {
+    padding: 10px 12px;
+    flex-wrap: wrap;
+  }
+
+  .topbar>div:last-child {
+    margin-left: 0 !important;
+    width: 100%;
+    justify-content: center;
+  }
+
+  .picks {
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)) !important;
+  }
+
+  .modal-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  /* Leaderboard Mobile */
+  .leaderboard-header,
+  .leaderboard-row {
+    grid-template-columns: 50px 1.5fr 1fr !important;
+    font-size: 12px;
+    padding: 10px;
+    gap: 8px;
+  }
+
+  .leaderboard-header>div:nth-last-child(1),
+  .leaderboard-header>div:nth-last-child(2),
+  .leaderboard-row>div:nth-last-child(1),
+  .leaderboard-row>div:nth-last-child(2) {
+    display: none;
+  }
+
+  /* Prices Page Mobile */
+  .price-row {
+    grid-template-columns: 1fr !important;
+    gap: 12px !important;
+    padding: 12px !important;
+  }
+
+  .price-row>div:first-child {
+    grid-column: 1 / -1;
+  }
+
+  .price-row>div:not(:first-child) {
+    display: flex;
+    justify-content: space-between;
+    padding: 8px 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  [data-theme="light"] .price-row>div:not(:first-child) {
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+  }
+}
+
+@media (max-width: 480px) {
+  .picks {
+    grid-template-columns: 1fr !important;
+  }
+
+  .modal-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* =================================================================
+   LIGHT MODE İÇİN ACİL GÖRÜNÜRLÜK YAMASI (KESİN ÇÖZÜM)
+   ================================================================= */
+
+/* 1. TÜM METİNLERİ ZORLA SİYAH YAP (Profile Sayfası Dahil) */
+[data-theme="light"] .panel div,
+[data-theme="light"] .panel span,
+[data-theme="light"] .panel p,
+[data-theme="light"] .panel h1,
+[data-theme="light"] .panel h2,
+[data-theme="light"] .panel h3,
+[data-theme="light"] .panel label,
+[data-theme="light"] .panel li {
+  color: #0f172a !important;
+  /* Koyu Lacivert/Siyah */
+  opacity: 1 !important;
+  /* Saydamlığı iptal et */
+  text-shadow: none !important;
+}
+
+/* 2. SOLUK YAZILARI (Member Since vb.) GÖRÜNÜR GRİ YAP */
+/* Normalde beyaz ve %50 opak olan yazıları düzeltir */
+[data-theme="light"] .muted,
+[data-theme="light"] div[style*="rgba(255,255,255"],
+[data-theme="light"] span[style*="rgba(255,255,255"] {
+  color: #475569 !important;
+  /* Okunabilir Gri */
+  opacity: 1 !important;
+}
+
+/* 3. SAĞ ÜSTTEKİ 'X' BUTONU VE İKONLAR */
+/* Buton içindeki SVG veya Yazıyı Siyah Yap */
+[data-theme="light"] button svg,
+[data-theme="light"] button span,
+[data-theme="light"] a svg {
+  fill: #0f172a !important;
+  color: #0f172a !important;
+  stroke: #0f172a !important;
+}
+
+/* 4. İSTİSNALAR (Bunların Rengi Bozulmasın) */
+
+/* Primary Buton (Örn: Change Photo) Yazısı Beyaz Kalsın */
+[data-theme="light"] .btn.primary,
+[data-theme="light"] .btn.primary span {
+  color: #ffffff !important;
+}
+
+/* Kırmızı Butonlar (Logout vb.) Kırmızı Kalsın */
+[data-theme="light"] .btn[style*="rgba(239,68,68"] {
+  color: #dc2626 !important;
+}
+
+/* Yeşil/Kırmızı Puanlar ve Rozetler */
+[data-theme="light"] .points.good,
+[data-theme="light"] .badge,
+[data-theme="light"] .dir-up {
+  color: #16a34a !important;
+}
+
+[data-theme="light"] .points.bad,
+[data-theme="light"] .dir-down {
+  color: #dc2626 !important;
+}
+
+/* Logo Rengini Bozma */
+[data-theme="light"] .brand svg,
+[data-theme="light"] .brand svg path {
+  fill: initial !important;
+  stroke: initial !important;
+}
+
+/* Utility Classes for forcing colors on dark cards in Light Mode */
+/* Increased specificity to override [data-theme="light"] selectors */
+html[data-theme="light"] .app .text-force-white {
+  color: #ffffff !important;
+}
+
+html[data-theme="light"] .app .text-force-light-gray {
+  color: #94a3b8 !important;
+}
+
+html[data-theme="light"] .app .text-force-gold {
+  color: #fbbf24 !important;
+}
+
+/* =========================================
+   MODAL STYLES (Added for Registration)
+   ========================================= */
+
+.modal-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(5px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+}
+
+.modal {
+  background: #1e293b;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+  width: 90%;
+  max-width: 500px;
+  overflow: hidden;
+  animation: modalPop 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.modal-header {
+  padding: 16px 20px;
+  background: rgba(0, 0, 0, 0.2);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+@keyframes modalPop {
+  from {
+    opacity: 0;
+    transform: scale(0.95) translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
 }

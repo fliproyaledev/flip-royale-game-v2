@@ -57,14 +57,14 @@ export type UserRecord = {
   updatedAt: string
 
   activeRound?: RoundPick[]
-  nextRound?: RoundPick[]
+  nextRound?: (RoundPick | null)[]
   currentRound?: number
   lastSettledDay?: string
   inventory?: Record<string, number>
   lastDailyPack?: string
-  
+
   // GÜNCELLENDİ: History yapısı artık 'any' değil, detaylı tip
-  roundHistory?: RoundHistoryEntry[] 
+  roundHistory?: RoundHistoryEntry[]
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -99,10 +99,10 @@ export async function loadUsers(): Promise<Record<string, UserRecord>> {
     const raw = fs.readFileSync(USERS_FILE, 'utf8')
     const json = JSON.parse(raw)
     if (json && typeof json === 'object') {
-      try { await saveUsersKV(json) } catch {}
+      try { await saveUsersKV(json) } catch { }
       return json as Record<string, UserRecord>
     }
-  } catch {}
+  } catch { }
   return {}
 }
 
@@ -111,7 +111,7 @@ export async function loadUsers(): Promise<Record<string, UserRecord>> {
 // ─────────────────────────────────────────────────────────────
 
 export async function saveUsers(map: Record<string, UserRecord>): Promise<void> {
-  await saveUsersKV(map); 
+  await saveUsersKV(map);
   if (IS_VERCEL) return;
   try {
     ensureDir();
@@ -136,10 +136,10 @@ export function loadUsersSync(): Record<string, UserRecord> {
 }
 
 export function saveUsersSync(map: Record<string, UserRecord>): void {
-  if (IS_VERCEL) { saveUsersKV(map).catch(() => {}); return }
+  if (IS_VERCEL) { saveUsersKV(map).catch(() => { }); return }
   ensureDir()
   fs.writeFileSync(USERS_FILE, JSON.stringify(map, null, 2), 'utf8')
-  saveUsersKV(map).catch(() => {})
+  saveUsersKV(map).catch(() => { })
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -158,20 +158,20 @@ export function getOrCreateUser(map: Record<string, UserRecord>, userId: string)
     user = {
       id: userId,
       totalPoints: 0,
-      bankPoints: 10000,
-      giftPoints: 10000,
+      bankPoints: 0,
+      giftPoints: 0,
       logs: [{
         type: 'system',
         date: now.slice(0, 10),
-        bonusGranted: 10000,
-        note: 'user-registered'
+        bonusGranted: 0,
+        note: 'user-registered-gift-pack'
       }],
       createdAt: now,
       updatedAt: now,
       activeRound: [],
       nextRound: Array(5).fill(null) as any,
       currentRound: 1,
-      inventory: {},
+      inventory: { common: 1 },
       roundHistory: []
     }
     map[userId] = user

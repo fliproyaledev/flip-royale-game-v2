@@ -37,7 +37,6 @@
       }
     ],
     "updatedAt": "2025-11-15T14:24:01.245Z"
-
   },
   "user_1763218017811": {
     "id": "user_1763218017811",
@@ -53,5 +52,409 @@
       }
     ],
     "updatedAt": "2025-11-15T15:43:41.925Z"
+  },
+  "0xc3ad6041dd8d054756f2de8f7f25261d473c697c": {
+    "id": "0xc3ad6041dd8d054756f2de8f7f25261d473c697c",
+    "totalPoints": 0,
+    "bankPoints": 10000,
+    "giftPoints": 0,
+    "logs": [
+      {
+        "type": "system",
+        "date": "2025-11-25",
+        "bonusGranted": 10000,
+        "note": "user-registered"
+      },
+      {
+        "type": "system",
+        "date": "2025-11-25",
+        "note": "purchase-pack"
+      },
+      {
+        "type": "system",
+        "date": "2025-11-25",
+        "note": "purchase-pack"
+      }
+    ],
+    "createdAt": "2025-11-25T12:27:31.620Z",
+    "updatedAt": "2025-11-26T13:36:11.135Z",
+    "activeRound": [],
+    "nextRound": [
+      {
+        "tokenId": "virgen",
+        "dir": "UP",
+        "duplicateIndex": 1,
+        "locked": false
+      },
+      {
+        "tokenId": "loky",
+        "dir": "UP",
+        "duplicateIndex": 1,
+        "locked": false
+      },
+      {
+        "tokenId": "acolyt",
+        "dir": "UP",
+        "duplicateIndex": 1,
+        "locked": false
+      },
+      {
+        "tokenId": "robot",
+        "dir": "UP",
+        "duplicateIndex": 1,
+        "locked": false
+      },
+      {
+        "tokenId": "ethy",
+        "dir": "UP",
+        "duplicateIndex": 1,
+        "locked": false
+      }
+    ],
+    "currentRound": 1,
+    "inventory": {
+      "loky": 1,
+      "ethy": 1,
+      "shekel": 2,
+      "vader": 1,
+      "acolyt": 1,
+      "robot": 1,
+      "game": 1,
+      "altt": 1,
+      "virgen": 1
+    },
+    "roundHistory": [],
+    "name": "cryptokong",
+    "walletAddress": "0xc3ad6041dd8d054756f2de8f7f25261d473c697c"
+  },
+  "0x59749215da9aedc456b173146c0890af87f6e6f4": {
+    "id": "0x59749215da9aedc456b173146c0890af87f6e6f4",
+    "totalPoints": 0,
+    "bankPoints": 10000,
+    "giftPoints": 0,
+    "logs": [
+      {
+        "type": "system",
+        "date": "2025-11-26",
+        "bonusGranted": 10000,
+        "note": "user-registered"
+      },
+      {
+        "type": "system",
+        "date": "2025-11-26",
+        "note": "purchase-pack"
+      },
+      {
+        "type": "system",
+        "date": "2025-11-26",
+        "note": "purchase-pack"
+      }
+    ],
+    "createdAt": "2025-11-26T19:57:03.984Z",
+    "updatedAt": "2025-11-26T20:12:56.125Z",
+    "activeRound": [],
+    "nextRound": [
+      {
+        "tokenId": "adm",
+        "dir": "UP",
+        "duplicateIndex": 1,
+        "locked": false
+      },
+      {
+        "tokenId": "wire",
+        "dir": "UP",
+        "duplicateIndex": 1,
+        "locked": false
+      },
+      {
+        "tokenId": "room",
+        "dir": "UP",
+        "duplicateIndex": 1,
+        "locked": false
+      },
+      {
+        "tokenId": "mfer",
+        "dir": "UP",
+        "duplicateIndex": 1,
+        "locked": false
+      },
+      {
+        "tokenId": "lurky",
+        "dir": "UP",
+        "duplicateIndex": 1,
+        "locked": false
+      }
+    ],
+    "currentRound": 1,
+    "inventory": {
+      "bro": 1,
+      "mfer": 1,
+      "adm": 1,
+      "wire": 1,
+      "aixbt": 1,
+      "lurky": 1,
+      "wach": 1,
+      "mamo": 1,
+      "altt": 1,
+      "room": 1
+    },
+    "roundHistory": [],
+    "name": "taxitelefoni",
+    "walletAddress": "0x59749215da9aedc456b173146c0890af87f6e6f4"
+  },
+  "0x34a6a92c63714da3b13ef785cbca6258ecf3150c": {
+    "id": "0x34a6a92c63714da3b13ef785cbca6258ecf3150c",
+    "totalPoints": 0,
+    "bankPoints": 5000,
+    "giftPoints": 0,
+    "logs": [
+      {
+        "type": "system",
+        "date": "2025-11-26",
+        "bonusGranted": 10000,
+        "note": "user-registered"
+      },
+      {
+        "type": "system",
+        "date": "2025-11-28",
+        "note": "buy-common-pack-x1"
+      },
+      {
+        "type": "system",
+        "date": "2025-11-28",
+        "note": "buy-common-pack-x1"
+      },
+      {
+        "type": "system",
+        "date": "2025-11-28",
+        "note": "buy-common-pack-x1"
+      }
+    ],
+    "createdAt": "2025-11-26T20:46:02.035Z",
+    "updatedAt": "2025-11-28T21:12:49.777Z",
+    "activeRound": [],
+    "nextRound": [
+      {
+        "tokenId": "acolyt",
+        "dir": "UP",
+        "duplicateIndex": 1,
+        "locked": false
+      },
+      {
+        "tokenId": "axr",
+        "dir": "UP",
+        "duplicateIndex": 1,
+        "locked": false
+      },
+      {
+        "tokenId": "tibbir",
+        "dir": "UP",
+        "duplicateIndex": 1,
+        "locked": false
+      },
+      {
+        "tokenId": "swarm",
+        "dir": "UP",
+        "duplicateIndex": 1,
+        "locked": false
+      },
+      {
+        "tokenId": "wire",
+        "dir": "UP",
+        "duplicateIndex": 1,
+        "locked": false
+      }
+    ],
+    "currentRound": 1,
+    "inventory": {
+      "shekel": 3,
+      "acolyt": 2,
+      "wire": 1,
+      "tibbir": 3,
+      "swarm": 1,
+      "sam": 1,
+      "trust": 1,
+      "mfer": 1,
+      "game": 1,
+      "axr": 1
+    },
+    "roundHistory": [],
+    "name": "casdf",
+    "walletAddress": "0x34a6a92c63714da3b13ef785cbca6258ecf3150c"
+  },
+  "0x08c0f406679664f3bdf8045753dcb19a5e24deda": {
+    "id": "0x08c0f406679664f3bdf8045753dcb19a5e24deda",
+    "totalPoints": 0,
+    "bankPoints": 0,
+    "giftPoints": 0,
+    "logs": [
+      {
+        "type": "system",
+        "date": "2025-11-30",
+        "bonusGranted": 10000,
+        "note": "user-registered"
+      },
+      {
+        "type": "system",
+        "date": "2025-11-30",
+        "note": "buy-rare-pack-x1"
+      },
+      {
+        "type": "system",
+        "date": "2025-11-30",
+        "note": "buy-common-pack-x1"
+      },
+      {
+        "type": "system",
+        "date": "2025-11-30",
+        "note": "buy-common-pack-x1"
+      }
+    ],
+    "createdAt": "2025-11-30T21:19:56.308Z",
+    "updatedAt": "2025-11-30T21:20:29.441Z",
+    "activeRound": [],
+    "nextRound": [
+      {
+        "tokenId": "acolyt",
+        "dir": "UP",
+        "duplicateIndex": 1,
+        "locked": false
+      },
+      {
+        "tokenId": "lucien",
+        "dir": "UP",
+        "duplicateIndex": 1,
+        "locked": false
+      },
+      {
+        "tokenId": "ethy",
+        "dir": "UP",
+        "duplicateIndex": 1,
+        "locked": false
+      },
+      {
+        "tokenId": "vader",
+        "dir": "UP",
+        "duplicateIndex": 1,
+        "locked": false
+      },
+      {
+        "tokenId": "vpay",
+        "dir": "UP",
+        "duplicateIndex": 1,
+        "locked": false
+      }
+    ],
+    "currentRound": 1,
+    "inventory": {
+      "vader": 1,
+      "acolyt": 1,
+      "vpay": 1,
+      "ethy": 1,
+      "lucien": 1,
+      "mfer": 1,
+      "robot": 1,
+      "luna": 2,
+      "samur": 1,
+      "santa": 1,
+      "mute": 1,
+      "symp": 1,
+      "sam": 1,
+      "shekel": 1
+    },
+    "roundHistory": [],
+    "name": "mnzs",
+    "walletAddress": "0x08c0f406679664f3bdf8045753dcb19a5e24deda"
+  },
+  "0x31c10ddf2f487ed040acda3e3e48c4aff2b5c8cb": {
+    "id": "0x31c10ddf2f487ed040acda3e3e48c4aff2b5c8cb",
+    "totalPoints": 0,
+    "bankPoints": 10000,
+    "giftPoints": 10000,
+    "logs": [
+      {
+        "type": "system",
+        "date": "2025-11-30",
+        "bonusGranted": 10000,
+        "note": "user-registered"
+      }
+    ],
+    "createdAt": "2025-11-30T21:22:08.129Z",
+    "updatedAt": "2025-11-30T21:22:08.129Z",
+    "activeRound": [],
+    "nextRound": [
+      null,
+      null,
+      null,
+      null,
+      null
+    ],
+    "currentRound": 1,
+    "inventory": {},
+    "roundHistory": [],
+    "name": "rre",
+    "walletAddress": "0x31c10ddf2f487ed040acda3e3e48c4aff2b5c8cb"
+  },
+  "0x45afd939a46d84c6f0a44fbc6489df6d67ff8927": {
+    "id": "0x45afd939a46d84c6f0a44fbc6489df6d67ff8927",
+    "totalPoints": 0,
+    "bankPoints": 0,
+    "giftPoints": 0,
+    "logs": [
+      {
+        "type": "system",
+        "date": "2025-11-30",
+        "bonusGranted": 0,
+        "note": "user-registered-gift-pack"
+      }
+    ],
+    "createdAt": "2025-11-30T21:45:30.223Z",
+    "updatedAt": "2025-11-30T21:45:30.223Z",
+    "activeRound": [],
+    "nextRound": [
+      null,
+      null,
+      null,
+      null,
+      null
+    ],
+    "currentRound": 1,
+    "inventory": {
+      "common": 1
+    },
+    "roundHistory": [],
+    "name": "azx",
+    "walletAddress": "0x45afd939a46d84c6f0a44fbc6489df6d67ff8927"
+  },
+  "0xdbd14b5cd8c402a4e8332d9cae966dd8fba72dcf": {
+    "id": "0xdbd14b5cd8c402a4e8332d9cae966dd8fba72dcf",
+    "totalPoints": 0,
+    "bankPoints": 0,
+    "giftPoints": 0,
+    "logs": [
+      {
+        "type": "system",
+        "date": "2025-11-30",
+        "bonusGranted": 0,
+        "note": "user-registered-gift-pack"
+      }
+    ],
+    "createdAt": "2025-11-30T23:13:03.390Z",
+    "updatedAt": "2025-11-30T23:13:03.390Z",
+    "activeRound": [],
+    "nextRound": [
+      null,
+      null,
+      null,
+      null,
+      null
+    ],
+    "currentRound": 1,
+    "inventory": {
+      "common": 1
+    },
+    "roundHistory": [],
+    "name": "tata",
+    "walletAddress": "0xdbd14b5cd8c402a4e8332d9cae966dd8fba72dcf"
   }
 }

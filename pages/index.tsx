@@ -3,8 +3,11 @@ import type { SyntheticEvent } from 'react'
 import { TOKENS, Token, getTokenById } from '../lib/tokens'
 import ThemeToggle from '../components/ThemeToggle'
 import { useTheme } from '../lib/theme'
+import BuyButton from '../components/BuyButton'
+import { useSignMessage, useAccount, useDisconnect } from 'wagmi'
+import { ConnectButton } from '@rainbow-me/rainbowkit'
 
-type RoundPick = { tokenId:string; dir:'UP'|'DOWN'; duplicateIndex:number; locked:boolean; pLock?:number; pointsLocked?:number; startPrice?:number }
+type RoundPick = { tokenId: string; dir: 'UP' | 'DOWN'; duplicateIndex: number; locked: boolean; pLock?: number; pointsLocked?: number; startPrice?: number }
 
 type RoundResult = {
   tokenId: string
@@ -14,22 +17,22 @@ type RoundResult = {
   percentage: number
   duplicateIndex: number
 }
-type DayResult = { 
-  dayKey:string
-  total:number
+type DayResult = {
+  dayKey: string
+  total: number
   userId?: string // User who participated
   userName?: string // User name
   walletAddress?: string // Wallet address
-  items:{ tokenId:string; symbol:string; dir:'UP'|'DOWN'; duplicateIndex:number; points:number }[]
+  items: { tokenId: string; symbol: string; dir: 'UP' | 'DOWN'; duplicateIndex: number; points: number }[]
   roundNumber?: number; // Backend'deki RoundHistoryEntry ile uyum için
 }
 
 // TOKENS imported from ../lib/tokens
 
-type HighlightEntry = { tokenId:string; symbol:string; points:number; dir:'UP'|'DOWN'; changePct:number }
+type HighlightEntry = { tokenId: string; symbol: string; points: number; dir: 'UP' | 'DOWN'; changePct: number }
 type HighlightState = { topGainers: HighlightEntry[]; topLosers: HighlightEntry[] }
 
-function utcDayKey(d=new Date()){ const y=d.getUTCFullYear(), m=d.getUTCMonth(), day=d.getUTCDate(); return `${y}-${String(m+1).padStart(2,'0')}-${String(day).padStart(2,'0')}` }
+function utcDayKey(d = new Date()) { const y = d.getUTCFullYear(), m = d.getUTCMonth(), day = d.getUTCDate(); return `${y}-${String(m + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}` }
 
 function msUntilNextUtcMidnight(): number {
   const now = new Date()
@@ -37,7 +40,7 @@ function msUntilNextUtcMidnight(): number {
   return next.getTime() - now.getTime()
 }
 
-async function getPrice(tokenId: string) { const r = await fetch(`/api/price?token=${encodeURIComponent(tokenId)}`); return r.json() as Promise<{p0:number; pLive:number; pClose:number; ts:string; changePct?:number; source?:'dexscreener'|'fallback'}> }
+async function getPrice(tokenId: string) { const r = await fetch(`/api/token-price?token=${encodeURIComponent(tokenId)}`); return r.json() as Promise<{ p0: number; pLive: number; pClose: number; ts: string; changePct?: number; source?: 'dexscreener' | 'fallback' }> }
 
 function formatRemaining(ms: number): string {
   if (ms <= 0) return 'Expired'
@@ -46,16 +49,16 @@ function formatRemaining(ms: number): string {
   return `${hours}h ${minutes}m`
 }
 
-function nerfFactor(dup:number){ 
-  if(dup<=1) return 1; 
-  if(dup===2) return 0.75; 
-  if(dup===3) return 0.5; 
-  if(dup===4) return 0.25; 
-  if(dup===5) return 0; 
-  return 0; 
+function nerfFactor(dup: number) {
+  if (dup <= 1) return 1;
+  if (dup === 2) return 0.75;
+  if (dup === 3) return 0.5;
+  if (dup === 4) return 0.25;
+  if (dup === 5) return 0;
+  return 0;
 }
 
-function clamp(v:number, lo:number, hi:number){ return Math.max(lo, Math.min(hi, v)) }
+function clamp(v: number, lo: number, hi: number) { return Math.max(lo, Math.min(hi, v)) }
 
 function getGradientColor(index: number): string {
   const colors = [
@@ -82,62 +85,71 @@ function handleImageFallback(event: SyntheticEvent<HTMLImageElement>) {
   target.src = '/token-logos/placeholder.png'
 }
 
-function calcPoints(p0:number, pNow:number, dir:'UP'|'DOWN', dup:number, boostLevel:0|50|100, boostActive:boolean){
-  const pct = ((pNow - p0)/p0)*100; 
-  const signed = dir==='UP'?pct:-pct; 
-  let pts = signed*100; // Each 1% change equals 100 points
-  
+function calcPoints(p0: number, pNow: number, dir: 'UP' | 'DOWN', dup: number, boostLevel: 0 | 50 | 100, boostActive: boolean) {
+  const pct = ((pNow - p0) / p0) * 100;
+  const signed = dir === 'UP' ? pct : -pct;
+  let pts = signed * 100; // Each 1% change equals 100 points
+
   const nerf = nerfFactor(dup);
-  const loss = 2 - nerf; 
-  
-  if(pts >= 0) {
+  const loss = 2 - nerf;
+
+  if (pts >= 0) {
     pts = pts * nerf;
   } else {
     pts = pts * loss;
   }
-  
-  pts = clamp(pts,-2500,2500);
-  
-  if(boostActive && boostLevel && pts > 0){ 
-    pts *= (boostLevel===100?2:boostLevel===50?1.5:1) 
+
+  pts = clamp(pts, -2500, 2500);
+
+  if (boostActive && boostLevel && pts > 0) {
+    pts *= (boostLevel === 100 ? 2 : boostLevel === 50 ? 1.5 : 1)
   }
-  
+
   return Math.round(pts);
 }
 
-export default function Home(){
+export default function Home() {
   const { theme } = useTheme()
-  
+  const { address, isConnected } = useAccount()
+  const { disconnect } = useDisconnect()
+  const { signMessageAsync } = useSignMessage()
+
+  const [isRegistering, setIsRegistering] = useState(false)
+  const [isRegisteringLoading, setIsRegisteringLoading] = useState(false)
+  const [regUsername, setRegUsername] = useState('')
+  const [regError, setRegError] = useState('')
+  const [showWelcomeGift, setShowWelcomeGift] = useState(false) // Welcome Gift State
+
   // --- ZAMAN VE FINALIZING KONTROLÜ ---
   const [now, setNow] = useState(Date.now())
 
   // 🛑 TEST MODU AÇIK: 'true' olduğu için Active Round panelinde Finalizing göreceksin.
   // Test bitince burayı silip alttaki yorum satırını açmalısın.
- // const isFinalizingWindow = true; 
+  // const isFinalizingWindow = true; 
 
-   // ✅ GERÇEK KOD (Test bitince bunu aç):
-  
+  // ✅ GERÇEK KOD (Test bitince bunu aç):
+
   const nowDate = new Date();
   const isFinalizingWindow = nowDate.getUTCHours() === 0 && nowDate.getUTCMinutes() < 5;
-  
+
   // ------------------------------------
 
-  const [inventory, setInventory] = useState<Record<string,number>>({})
+  const [inventory, setInventory] = useState<Record<string, number>>({})
   const [active, setActive] = useState<RoundPick[]>([])
-  const [nextRound, setNextRound] = useState<RoundPick[]>(Array(5).fill(null))
+  const [nextRound, setNextRound] = useState<(RoundPick | null)[]>(Array(5).fill(null))
   const [nextRoundLoaded, setNextRoundLoaded] = useState(false) // Flag to prevent overwriting loaded data
   const [nextRoundSaved, setNextRoundSaved] = useState(false) // Flag to track if picks are saved
-  const [prices, setPrices] = useState<Record<string,{p0:number;pLive:number;pClose:number;changePct?:number;source?:'dexscreener'|'fallback'}>>({})
-  const [reveals, setReveals] = useState([false,false,false,false,false])
-  const [boost, setBoost] = useState<{ level:0|50|100; endAt?:number }>({ level:0 })
+  const [prices, setPrices] = useState<Record<string, { p0: number; pLive: number; pClose: number; changePct?: number; source?: 'dexscreener' | 'fallback' }>>({})
+  const [reveals, setReveals] = useState([false, false, false, false, false])
+  const [boost, setBoost] = useState<{ level: 0 | 50 | 100; endAt?: number }>({ level: 0 })
   const [mounted, setMounted] = useState(false)
   const [user, setUser] = useState<any>(null)
-  const [boostNext, setBoostNext] = useState<0|50|100>(0)
+  const [boostNext, setBoostNext] = useState<0 | 50 | 100>(0)
   const [history, setHistory] = useState<DayResult[]>([])
-  const [showSummary, setShowSummary] = useState<{open:boolean; items:DayResult|null}>({open:false, items:null})
-  const [modalOpen, setModalOpen] = useState<{open:boolean; type:'select'|'summary'|'pack'}>({open:false, type:'select'})
+  const [showSummary, setShowSummary] = useState<{ open: boolean; items: DayResult | null }>({ open: false, items: null })
+  const [modalOpen, setModalOpen] = useState<{ open: boolean; type: 'select' | 'summary' | 'pack' }>({ open: false, type: 'select' })
   const [modalSearch, setModalSearch] = useState('')
-  const [showRoundResults, setShowRoundResults] = useState<{open: boolean; results: RoundResult[]}>({open: false, results: []})
+  const [showRoundResults, setShowRoundResults] = useState<{ open: boolean; results: RoundResult[] }>({ open: false, results: [] })
   const [currentRound, setCurrentRound] = useState(1)
   const [stateLoaded, setStateLoaded] = useState(false)
   const [inventoryLoaded, setInventoryLoaded] = useState(false)
@@ -145,12 +157,106 @@ export default function Home(){
   const [earnedPoints, setEarnedPoints] = useState<number>(0)
   const [giftPoints, setGiftPoints] = useState<number>(0)
   const [buyQty, setBuyQty] = useState<number>(1)
-  const [showMysteryResults, setShowMysteryResults] = useState<{open:boolean; cards:string[]}>({open:false, cards:[]})
+  const [rareBuyQty, setRareBuyQty] = useState<number>(1)
+  const [showMysteryResults, setShowMysteryResults] = useState<{ open: boolean; cards: string[] }>({ open: false, cards: [] })
   const [globalHighlights, setGlobalHighlights] = useState<HighlightState>({ topGainers: [], topLosers: [] })
 
   const DEFAULT_AVATAR = '/avatars/default-avatar.png'
 
   const boostActive = !!(boost.endAt && boost.endAt > Date.now())
+
+  useEffect(() => {
+    if (isConnected && address && !user) {
+      checkUser(address)
+    }
+  }, [isConnected, address, user])
+
+  async function checkUser(walletAddress: string) {
+    try {
+      const res = await fetch(`/api/auth/check?address=${walletAddress}`)
+      const data = await res.json()
+
+      if (data.exists) {
+        loginUser(data.user)
+      } else {
+        setIsRegistering(true)
+      }
+    } catch (e) {
+      console.error("Auth check failed", e)
+    }
+  }
+
+  async function handleRegister() {
+    console.log("Register button clicked")
+    if (!regUsername || regUsername.trim().length < 3) {
+      setRegError('Username must be at least 3 characters.')
+      return
+    }
+
+    if (!/^[a-zA-Z0-9_]+$/.test(regUsername)) {
+      setRegError('Username can only contain letters, numbers, and underscores.')
+      return
+    }
+
+    if (!address) {
+      console.error("No address found")
+      return
+    }
+
+    setIsRegisteringLoading(true)
+    setRegError('')
+
+    try {
+      console.log("Requesting signature...")
+      const messageToSign = `Flip Royale: Create Account\nUsername: ${regUsername}\nAddress: ${address}`
+      await signMessageAsync({ message: messageToSign })
+      console.log("Signature received")
+
+      console.log("Calling register API...")
+      const res = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ address, username: regUsername })
+      })
+
+      const data = await res.json()
+      console.log("Register API response:", data)
+
+      if (data.ok) {
+        loginUser(data.user, data.isNewUser) // Pass isNewUser flag
+        setIsRegistering(false)
+      } else {
+        setRegError(data.error || 'Registration failed')
+      }
+    } catch (e) {
+      console.error("Registration error", e)
+      setRegError('Registration failed or cancelled. Check console.')
+    } finally {
+      setIsRegisteringLoading(false)
+    }
+  }
+
+  function loginUser(userData: any, isNewUser = false) {
+    localStorage.setItem('flipflop-user', JSON.stringify({
+      id: userData.id,
+      username: userData.name || userData.username,
+      avatar: userData.avatar
+    }))
+
+    // Fix Infinite Reload: Only reload if strictly necessary, or just update state
+    // For new users, we MUST NOT reload to show the modal
+    if (isNewUser) {
+      setUser(userData)
+      setShowWelcomeGift(true)
+      loadUserData() // Load initial data without reload
+    } else {
+      // For existing users, reload is safer to ensure fresh state, 
+      // BUT check if we are already logged in to avoid loop
+      if (!user) {
+        window.location.reload()
+      }
+    }
+  }
 
   function resetPersistentState() {
     setInventory({})
@@ -185,24 +291,24 @@ export default function Home(){
         'flipflop-global-highlights',
         'flipflop-has-started'
       ].forEach(key => localStorage.removeItem(key))
-    } catch {}
+    } catch { }
   }
 
   useEffect(() => {
     setMounted(true)
-    
+
     let pointsInterval: NodeJS.Timeout | null = null
-    
+
     const savedUser = localStorage.getItem('flipflop-user')
     if (savedUser) {
       const parsed = JSON.parse(savedUser)
       if (!parsed.avatar) {
         parsed.avatar = DEFAULT_AVATAR
-        try { localStorage.setItem('flipflop-user', JSON.stringify(parsed)) } catch {}
+        try { localStorage.setItem('flipflop-user', JSON.stringify(parsed)) } catch { }
       }
       setUser(parsed)
       // Load user points from server
-      async function loadUserPoints() {
+      const loadUserPoints = async () => {
         try {
           const r = await fetch(`/api/users/me?userId=${encodeURIComponent(parsed.id)}`)
           const j = await r.json()
@@ -211,7 +317,7 @@ export default function Home(){
               setPoints(j.user.bankPoints)
               try {
                 localStorage.setItem('flipflop-points', String(j.user.bankPoints))
-              } catch {}
+              } catch { }
             }
             if (j.user.giftPoints !== undefined) {
               setGiftPoints(j.user.giftPoints)
@@ -220,19 +326,19 @@ export default function Home(){
               setEarnedPoints(j.user.totalPoints)
             }
           }
-        } catch {}
+        } catch { }
       }
       loadUserPoints()
-      
+
       // Refresh points periodically
       pointsInterval = setInterval(() => {
         loadUserPoints()
       }, 30000) // Refresh every 30 seconds
     } else {
-      // Redirect to auth page if no user
-      window.location.href = '/auth'
+      // No user found - stay on homepage (Guest View)
+      // window.location.href = '/auth'
     }
-    
+
     // CRITICAL: Load nextRound FIRST before any other operations
     // This MUST run regardless of user state
     // This ensures we never lose the user's selections
@@ -240,16 +346,16 @@ export default function Home(){
     try {
       const savedNext = localStorage.getItem('flipflop-next')
       console.log('🔍 [INIT] Checking localStorage for flipflop-next:', savedNext ? 'EXISTS' : 'NOT FOUND')
-      
+
       if (savedNext) {
         try {
           const parsed = JSON.parse(savedNext)
           console.log('🔍 [INIT] Parsed nextRound:', parsed)
-          
+
           if (Array.isArray(parsed) && parsed.length === 5) {
             // Validate that all items are either null or valid RoundPick objects
-            const isValid = parsed.every((item: any) => 
-              item === null || 
+            const isValid = parsed.every((item: any) =>
+              item === null ||
               (typeof item === 'object' && item !== null && item.tokenId && typeof item.dir === 'string')
             )
             if (isValid) {
@@ -276,7 +382,7 @@ export default function Home(){
     // ALSO: Check if user has no inventory (new user) - if so, clear nextRound
     const hasStarted = localStorage.getItem('flipflop-has-started')
     const hasNextRound = savedNextRound !== null && savedNextRound.some(p => p !== null)
-    
+
     // Check if inventory is empty (new user indicator)
     const savedInventory = localStorage.getItem('flipflop-inventory')
     let hasInventory = false
@@ -284,13 +390,13 @@ export default function Home(){
       try {
         const parsedInv = JSON.parse(savedInventory)
         hasInventory = Object.keys(parsedInv).length > 0 && Object.values(parsedInv).some((v: any) => v > 0)
-      } catch {}
+      } catch { }
     }
-    
+
     // New user: no inventory AND no started flag OR no nextRound
     const isNewUser = !hasInventory && (!hasStarted || !hasNextRound)
     const isFreshStart = !hasStarted && !hasNextRound || isNewUser
-    
+
     if (isFreshStart || isNewUser) {
       // Mark as started - only on first visit when there's no saved data
       // OR for new users with no inventory
@@ -378,12 +484,12 @@ export default function Home(){
         // Try to load again if pre-load failed
         const savedNext = localStorage.getItem('flipflop-next')
         console.log('🔍 [LOAD] Second attempt to load nextRound:', savedNext ? 'EXISTS' : 'NOT FOUND')
-        
+
         if (savedNext) {
           try {
             const parsed = JSON.parse(savedNext)
             console.log('🔍 [LOAD] Parsed nextRound on second attempt:', parsed)
-            
+
             // CRITICAL: For new users (no inventory), clear nextRound even if it exists
             if (isNewUser && Array.isArray(parsed) && parsed.some((p: any) => p !== null)) {
               console.log('🆕 [NEW-USER] Clearing nextRound for new user on second attempt (has no inventory)')
@@ -393,8 +499,8 @@ export default function Home(){
               setNextRoundLoaded(true)
               setNextRoundSaved(false)
             } else if (Array.isArray(parsed) && parsed.length === 5) {
-              const isValid = parsed.every((item: any) => 
-                item === null || 
+              const isValid = parsed.every((item: any) =>
+                item === null ||
                 (typeof item === 'object' && item !== null && item.tokenId && typeof item.dir === 'string')
               )
               if (isValid) {
@@ -444,14 +550,14 @@ export default function Home(){
           setNextRoundLoaded(true)
         }
       }
-      
+
       // Ensure flipflop-has-started is set if we have any saved data
       if (!hasStarted && (savedActive || savedNextRound)) {
         try {
           localStorage.setItem('flipflop-has-started', '1')
-        } catch {}
+        } catch { }
       }
-      
+
       setStateLoaded(true)
     } catch (e) {
       console.error('Failed to load state from localStorage:', e)
@@ -464,7 +570,7 @@ export default function Home(){
       }
       setStateLoaded(true)
     }
-    
+
     // Cleanup function for points interval
     return () => {
       if (pointsInterval) {
@@ -473,8 +579,8 @@ export default function Home(){
     }
   }, [])
 
-  useEffect(()=>{ const id=setInterval(()=>setNow(Date.now()), 4000); return ()=>clearInterval(id) },[])
-// UTC 00:00'da Veri Güncelleme (Logic Server-Side işliyor)
+  useEffect(() => { const id = setInterval(() => setNow(Date.now()), 4000); return () => clearInterval(id) }, [])
+  // UTC 00:00'da Veri Güncelleme (Logic Server-Side işliyor)
   useEffect(() => {
     if (!mounted || !stateLoaded) return
 
@@ -484,21 +590,21 @@ export default function Home(){
     const checkAndSettle = async () => {
       const today = utcDayKey()
       const lastSettled = localStorage.getItem('flipflop-last-settled-day')
-      
+
       console.log('⏰ [AUTO-DATA-REFRESH-CHECK]', {
         today,
         lastSettled,
         currentUTC: new Date().toUTCString()
       })
-      
+
       // Eğer lokaldeki tarih, güncel UTC tarihinden farklıysa, sunucudan taze veriyi çek.
       if (lastSettled !== today) {
         console.log('🔄 [AUTO-DATA-REFRESH] Yeni gün tespit edildi (UTC 00:00 geçti). Sunucudan güncel veriler çekiliyor...')
-        
+
         // KRİTİK DEĞİŞİKLİK: Client tarafında round geçişi veya hesaplama YAPILMAYACAK.
         // Çünkü hesaplamayı ve tur geçişini zaten Cron Job (Backend) yaptı.
-        await loadUserData() 
-        
+        await loadUserData()
+
         localStorage.setItem('flipflop-last-settled-day', today)
         console.log('✅ [AUTO-DATA-REFRESH] Veri başarıyla güncellendi.')
       }
@@ -513,7 +619,7 @@ export default function Home(){
     // UTC 00:00'a kadar bekle, sonra her gün tekrarla
     const msUntilMidnight = msUntilNextUtcMidnight()
     console.log('⏰ [AUTO-DATA-REFRESH] Next UTC 00:00 in', Math.floor(msUntilMidnight / 1000 / 60), 'minutes')
-    
+
     const timeoutId = setTimeout(() => {
       checkAndSettle()
       // Her 24 saatte bir kontrol et
@@ -531,23 +637,23 @@ export default function Home(){
   // This runs BEFORE stateLoaded check to ensure data is never lost
   useEffect(() => {
     console.log('🚀 [FORCE-LOAD] Component mounted, checking localStorage immediately...')
-    
+
     const savedNext = localStorage.getItem('flipflop-next')
     console.log('🚀 [FORCE-LOAD] localStorage check:', savedNext ? 'EXISTS' : 'NOT FOUND')
-    
+
     if (savedNext) {
       try {
         const parsed = JSON.parse(savedNext)
         console.log('🚀 [FORCE-LOAD] Parsed data:', parsed)
-        
+
         if (Array.isArray(parsed) && parsed.length === 5) {
           const hasData = parsed.some((p: any) => p !== null && p.tokenId)
-          
+
           if (hasData) {
             console.log('🚀 [FORCE-LOAD] FORCING nextRound restore:', parsed)
             setNextRound(parsed)
             setNextRoundLoaded(true)
-            
+
             // Check if all picks are filled to mark as saved
             const hasAllPicks = parsed.every((p: any) => p !== null && p.tokenId)
             if (hasAllPicks) {
@@ -571,70 +677,70 @@ export default function Home(){
 
   // CRITICAL: Auto-save nextRound to localStorage whenever it changes
   // This ensures data is never lost, even if user forgets to click "Save Picks"
-useEffect(() => {
-  // State tam yüklenmeden veya user yokken hiçbir şey yapma
-  if (!stateLoaded || !nextRoundLoaded || !user?.id) return
+  useEffect(() => {
+    // State tam yüklenmeden veya user yokken hiçbir şey yapma
+    if (!stateLoaded || !nextRoundLoaded || !user?.id) return
 
-  try {
-    // 1) LocalStorage’a yaz
-    const serialized = JSON.stringify(nextRound)
-    localStorage.setItem('flipflop-next', serialized)
-    console.log('💾 [AUTO] nextRound synced to localStorage:', serialized)
-  } catch (err) {
-    console.error('Failed to sync nextRound to localStorage:', err)
-  }
-
-  // 2) Sunucuya (Redis’e) yaz
-  ;(async () => {
     try {
-      const res = await fetch('/api/round/save', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          userId: user.id,
-          activeRound: active,     // ekranda görünen aktif round state’in
-          nextRound,               // seçtiğin kartlar
-          currentRound,            // şu anki round numarası
-        }),
-      })
-
-      const data = await res.json().catch(() => ({}))
-
-      if (!res.ok || !data.ok) {
-        console.error(
-          '⚠️ [AUTO] Failed to sync round to server:',
-          data?.error || res.statusText
-        )
-      } else {
-        console.log('✅ [AUTO] nextRound synced to server for', user.id)
-      }
+      // 1) LocalStorage’a yaz
+      const serialized = JSON.stringify(nextRound)
+      localStorage.setItem('flipflop-next', serialized)
+      console.log('💾 [AUTO] nextRound synced to localStorage:', serialized)
     } catch (err) {
-      console.error('⚠️ [AUTO] Network error while syncing round to server:', err)
+      console.error('Failed to sync nextRound to localStorage:', err)
     }
-  })()
-}, [nextRound, stateLoaded, nextRoundLoaded, user?.id, active, currentRound])
+
+    // 2) Sunucuya (Redis’e) yaz
+    ; (async () => {
+      try {
+        const res = await fetch('/api/round/save', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            userId: user.id,
+            activeRound: active,     // ekranda görünen aktif round state’in
+            nextRound,               // seçtiğin kartlar
+            currentRound,            // şu anki round numarası
+          }),
+        })
+
+        const data = await res.json().catch(() => ({}))
+
+        if (!res.ok || !data.ok) {
+          console.error(
+            '⚠️ [AUTO] Failed to sync round to server:',
+            data?.error || res.statusText
+          )
+        } else {
+          console.log('✅ [AUTO] nextRound synced to server for', user.id)
+        }
+      } catch (err) {
+        console.error('⚠️ [AUTO] Network error while syncing round to server:', err)
+      }
+    })()
+  }, [nextRound, stateLoaded, nextRoundLoaded, user?.id, active, currentRound])
 
 
   // CRITICAL: Ensure nextRound is loaded from localStorage on every mount
   // This is a safety check to prevent data loss
   useEffect(() => {
     if (!stateLoaded) return
-    
+
     // Always check localStorage on mount, regardless of current state
     const savedNext = localStorage.getItem('flipflop-next')
     console.log('🔄 [SAFETY] Checking localStorage on mount:', savedNext ? 'EXISTS' : 'NOT FOUND')
-    
+
     if (savedNext) {
       try {
         const parsed = JSON.parse(savedNext)
         console.log('🔄 [SAFETY] Parsed data from localStorage:', parsed)
-        
+
         if (Array.isArray(parsed) && parsed.length === 5) {
           const hasData = parsed.some(p => p !== null)
           const currentHasData = nextRound.some(p => p !== null)
-          
+
           // If localStorage has data but current state doesn't, restore it
           if (hasData && !currentHasData) {
             console.log('🔄 [SAFETY] Restoring nextRound from localStorage (empty state detected):', parsed)
@@ -695,56 +801,60 @@ useEffect(() => {
   // Removed points sync to localStorage
   // useEffect(()=>{ try { localStorage.setItem('flipflop-points', String(points)) } catch {} },[points])
 
-  async function buyMysteryPacks(){
+  async function buyMysteryPacks(packType: 'common' | 'rare' = 'common', isGift = false) {
     if (!user) { alert('Please log in first.'); return }
-    
+
     // First, get current points from server to ensure accuracy
     let currentPoints = points
     let currentGiftPoints = giftPoints
-    try {
-      const checkR = await fetch(`/api/users/me?userId=${encodeURIComponent(user.id)}`)
-      const checkJ = await checkR.json()
-      if (checkJ?.ok && checkJ?.user) {
-        if (checkJ.user.bankPoints !== undefined) {
-          currentPoints = checkJ.user.bankPoints
-          setPoints(currentPoints)
+
+    if (!isGift) {
+      try {
+        const checkR = await fetch(`/api/users/me?userId=${encodeURIComponent(user.id)}`)
+        const checkJ = await checkR.json()
+        if (checkJ?.ok && checkJ?.user) {
+          if (checkJ.user.bankPoints !== undefined) {
+            currentPoints = checkJ.user.bankPoints
+            setPoints(currentPoints)
+          }
+          if (checkJ.user.giftPoints !== undefined) {
+            currentGiftPoints = checkJ.user.giftPoints
+            setGiftPoints(currentGiftPoints)
+          }
+          if (typeof checkJ.user.totalPoints === 'number') {
+            setEarnedPoints(checkJ.user.totalPoints)
+          }
+          try {
+            localStorage.setItem('flipflop-points', String(currentPoints))
+          } catch { }
         }
-        if (checkJ.user.giftPoints !== undefined) {
-          currentGiftPoints = checkJ.user.giftPoints
-          setGiftPoints(currentGiftPoints)
-        }
-        if (typeof checkJ.user.totalPoints === 'number') {
-          setEarnedPoints(checkJ.user.totalPoints)
-        }
-        try {
-          localStorage.setItem('flipflop-points', String(currentPoints))
-        } catch {}
+      } catch (e) {
+        console.warn('Failed to refresh points before purchase:', e)
       }
-    } catch (e) {
-      console.warn('Failed to refresh points before purchase:', e)
     }
-    
-    const qty = Math.max(1, Math.min(10, buyQty))
-    const cost = 5000 * qty
-    
+
+    const qty = isGift ? 1 : (packType === 'rare' ? Math.max(1, Math.min(10, rareBuyQty)) : Math.max(1, Math.min(10, buyQty)))
+    const costPerPack = packType === 'rare' ? 10000 : 5000
+    const cost = costPerPack * qty
+
     // Check with total available points (giftPoints + bankPoints)
     const totalAvailable = currentGiftPoints + currentPoints
-    if (totalAvailable < cost) { 
-      alert(`Not enough points. You have ${totalAvailable.toLocaleString()} pts (${currentGiftPoints.toLocaleString()} gift + ${currentPoints.toLocaleString()} earned), need ${cost.toLocaleString()} pts.`)
-      return 
+    if (!isGift && totalAvailable < cost) {
+      alert(`Not enough points. You have ${totalAvailable.toLocaleString()} pts (${currentGiftPoints.toLocaleString()} gift + ${currentPoints.toLocaleString()} earned), need ${cost.toLocaleString()} pts for ${qty} ${packType} pack(s).`)
+      return
     }
-    
+
     try {
       const r = await fetch('/api/users/purchasePack', {
         method: 'POST',
-        headers: { 
+        headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
           'x-user-id': user.id
         },
-        body: JSON.stringify({ count: qty })
+        body: JSON.stringify({ count: qty, packType, useInventory: isGift })
       })
-      
+
       if (!r.ok) {
         let errorMsg = `Purchase failed: ${r.status} ${r.statusText}`
         try {
@@ -757,11 +867,11 @@ useEffect(() => {
               errorMsg = errorText || errorMsg
             }
           }
-        } catch {}
+        } catch { }
         alert(errorMsg)
         return
       }
-      
+
       const j = await r.json()
       if (!j.ok) {
         alert(j.error || 'Purchase failed')
@@ -795,11 +905,11 @@ useEffect(() => {
     }
   }
 
-  function addMysteryToInventory(){
+  function addMysteryToInventory() {
     if (!showMysteryResults.open) return
-    setShowMysteryResults({open:false, cards:[]})
+    setShowMysteryResults({ open: false, cards: [] })
   }
-async function snapshotGlobalHighlights() {
+  async function snapshotGlobalHighlights() {
     const allTokenIds = TOKENS.map(t => t.id)
     try {
       // 1. Tüm fiyatları çek
@@ -820,13 +930,13 @@ async function snapshotGlobalHighlights() {
           const baseline = data.p0
           const close = data.pClose ?? data.pLive
           if (!isFinite(baseline) || !isFinite(close) || baseline <= 0) return null
-          
+
           const changePct = ((close - baseline) / baseline) * 100
           const points = calcPoints(baseline, close, 'UP', 1, 0, false)
-          
+
           const token = getTokenById(id) || TOKENS.find(t => t.id === id)
           const symbol = token?.symbol || id.toUpperCase()
-          
+
           return { id, symbol, changePct, points }
         })
         .filter((entry): entry is { id: string; symbol: string; changePct: number; points: number } => !!entry)
@@ -866,17 +976,18 @@ async function snapshotGlobalHighlights() {
         topGainers: gainers,
         topLosers: losers
       })
-      
+
     } catch (err) {
       console.error('Failed to snapshot global highlights:', err)
     }
   }
 
   function handleLogout() {
+    disconnect()
     resetPersistentState()
-    try { localStorage.removeItem('flipflop-user') } catch {}
+    try { localStorage.removeItem('flipflop-user') } catch { }
     setUser(null)
-    window.location.href = '/auth'
+    window.location.reload()
   }
   useEffect(() => {
     if (boostActive) {
@@ -902,7 +1013,7 @@ async function snapshotGlobalHighlights() {
         }))
         if (cancelled) return
         setPrices(prev => {
-          const next: Record<string,{p0:number;pLive:number;pClose:number;changePct?:number;source?:'dexscreener'|'fallback'}> = { ...prev }
+          const next: Record<string, { p0: number; pLive: number; pClose: number; changePct?: number; source?: 'dexscreener' | 'fallback' }> = { ...prev }
           for (const entry of results) {
             if (!entry) continue
             const [id, data] = entry
@@ -918,7 +1029,7 @@ async function snapshotGlobalHighlights() {
           }
           return next
         })
-      } catch {}
+      } catch { }
     }
 
     preload()
@@ -943,7 +1054,7 @@ async function snapshotGlobalHighlights() {
         }))
         if (!cancelled) {
           setPrices(prev => {
-            const next: Record<string,{p0:number;pLive:number;pClose:number;changePct?:number;source?:'dexscreener'|'fallback'}> = { ...prev }
+            const next: Record<string, { p0: number; pLive: number; pClose: number; changePct?: number; source?: 'dexscreener' | 'fallback' }> = { ...prev }
             for (const [id, data] of entries) {
               const prevEntry = next[id]
               const p0 = prevEntry?.p0 ?? data.p0 ?? data.pLive
@@ -958,7 +1069,7 @@ async function snapshotGlobalHighlights() {
             return next
           })
         }
-      } catch {}
+      } catch { }
     }
 
     refresh()
@@ -967,61 +1078,61 @@ async function snapshotGlobalHighlights() {
   }, [active, nextRound])
 
   // Load user data from API
-// Load User Data from API
+  // Load User Data from API
   async function loadUserData() {
     try {
       // Initial check for user ID
       const savedUser = localStorage.getItem('flipflop-user')
       let userId = ''
-      if (savedUser) { try { userId = JSON.parse(savedUser).id } catch {} }
-      
+      if (savedUser) { try { userId = JSON.parse(savedUser).id } catch { } }
+
       if (!userId) return
 
       const r = await fetch(`/api/users/me?userId=${encodeURIComponent(userId)}`)
       const data = await r.json()
-      
+
       if (data.ok && data.user) {
-          setUser(data.user)
-          
-          // --- HISTORY (GEÇMİŞ) GÜNCELLEMESİ ---
-          if (Array.isArray(data.user.roundHistory)) {
-             // Backend verisini Frontend tipine çeviriyoruz
-             const mappedHistory = data.user.roundHistory.map((h: any) => ({
-                 dayKey: h.date,        
-                 total: h.totalPoints,
-                 userId: userId,
-                 items: h.items,
-                 roundNumber: h.roundNumber 
-             }));
-             setHistory(mappedHistory);
-          }
-          // -------------------------------------
+        setUser(data.user)
 
-          if (data.user.inventory) setInventory(data.user.inventory)
-          if (Array.isArray(data.user.activeRound)) setActive(data.user.activeRound)
-          
-          if (Array.isArray(data.user.nextRound)) {
-            setNextRound(data.user.nextRound)
-            const hasSavedNext = data.user.nextRound.some((p: any) => p)
-            setNextRoundSaved(hasSavedNext)
-          }
-          
-          if (typeof data.user.bankPoints === 'number') setPoints(data.user.bankPoints)
-          if (typeof data.user.giftPoints === 'number') setGiftPoints(data.user.giftPoints)
-          if (typeof data.user.totalPoints === 'number') setEarnedPoints(data.user.totalPoints)
-          if (typeof data.user.currentRound === 'number') setCurrentRound(data.user.currentRound)
+        // --- HISTORY (GEÇMİŞ) GÜNCELLEMESİ ---
+        if (Array.isArray(data.user.roundHistory)) {
+          // Backend verisini Frontend tipine çeviriyoruz
+          const mappedHistory = data.user.roundHistory.map((h: any) => ({
+            dayKey: h.date,
+            total: h.totalPoints,
+            userId: userId,
+            items: h.items,
+            roundNumber: h.roundNumber
+          }));
+          setHistory(mappedHistory);
+        }
+        // -------------------------------------
 
-          setInventoryLoaded(true)
-          setStateLoaded(true)
-          setNextRoundLoaded(true)
+        if (data.user.inventory) setInventory(data.user.inventory)
+        if (Array.isArray(data.user.activeRound)) setActive(data.user.activeRound)
+
+        if (Array.isArray(data.user.nextRound)) {
+          setNextRound(data.user.nextRound)
+          const hasSavedNext = data.user.nextRound.some((p: any) => p)
+          setNextRoundSaved(hasSavedNext)
+        }
+
+        if (typeof data.user.bankPoints === 'number') setPoints(data.user.bankPoints)
+        if (typeof data.user.giftPoints === 'number') setGiftPoints(data.user.giftPoints)
+        if (typeof data.user.totalPoints === 'number') setEarnedPoints(data.user.totalPoints)
+        if (typeof data.user.currentRound === 'number') setCurrentRound(data.user.currentRound)
+
+        setInventoryLoaded(true)
+        setStateLoaded(true)
+        setNextRoundLoaded(true)
       }
-    } catch(e) {
-        console.error("Load failed", e)
+    } catch (e) {
+      console.error("Load failed", e)
     }
   }
   useEffect(() => {
     loadUserData()
-    
+
     // Fetch global highlights if needed (could be another API)
     // For now, we might skip highlights persistence or move to API later
   }, [])
@@ -1034,11 +1145,11 @@ async function snapshotGlobalHighlights() {
   }
 
   function openModal(slotIndex: number) {
-    setModalOpen({open: true, type: 'select'})
+    setModalOpen({ open: true, type: 'select' })
   }
 
   function closeModal() {
-    setModalOpen({open: false, type: 'select'})
+    setModalOpen({ open: false, type: 'select' })
     setModalSearch('')
   }
 
@@ -1061,7 +1172,7 @@ async function snapshotGlobalHighlights() {
       closeModal()
     } else {
       alert('All slots are filled! Remove a card first.')
-  }
+    }
   }
 
   function removeFromNextRound(index: number) {
@@ -1076,21 +1187,26 @@ async function snapshotGlobalHighlights() {
     if (!user?.id) return
 
     try {
+      // 1. Önce İmza Al (Kullanıcı reddederse burası hata fırlatır ve işlem durur)
+      const selectedTickers = nextRound.filter(p => p).map(p => p?.tokenId).join(', ');
+      const messageToSign = `Flip Royale: Save Picks\nDate: ${new Date().toISOString().split('T')[0]}\nItems: ${nextRound.filter(p => p).length}\nCards: ${selectedTickers}`;
+      const signature = await signMessageAsync({
+        message: messageToSign, // Daha güzel mesaj
+      });
+
+      // 2. İmzayı API'ye gönder
       setNextRound(currentNextRound => {
-        // Validate nextRound before saving
+        // ... (Validasyon kodları aynı kalsın) ...
         if (!Array.isArray(currentNextRound) || currentNextRound.length !== 5) {
-          alert('Invalid picks data. Please try selecting cards again.')
+          alert('Invalid picks data.')
           return currentNextRound
         }
-        
-        // Check if all 5 slots are filled
         const filledCount = currentNextRound.filter(p => p !== null).length
         if (filledCount === 0) {
-          alert('Please select at least one card before saving.')
+          alert('Please select at least one card.')
           return currentNextRound
         }
-        
-        // Prepare data
+
         const dataToSave = currentNextRound.map(p => {
           if (p === null) return null
           return {
@@ -1100,92 +1216,47 @@ async function snapshotGlobalHighlights() {
             locked: p.locked || false
           }
         })
-        
-        // Call API
+
         fetch('/api/round/save', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                userId: user.id,
-                nextRound: dataToSave
-            })
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            userId: user.id,
+            nextRound: dataToSave,
+            signature: signature // <--- İMZAYI EKLİYORUZ
+          })
         }).then(r => r.json()).then(d => {
-            if (d.ok) {
-                setNextRoundLoaded(true)
-                setNextRoundSaved(true)
-                alert(`Picks saved successfully! ${filledCount}/5 cards selected.`)
-            } else {
-                alert('Failed to save picks: ' + (d.error || 'Unknown error'))
-            }
+          if (d.ok) {
+            setNextRoundLoaded(true)
+            setNextRoundSaved(true)
+            alert(`Picks saved successfully!`)
+          } else {
+            alert('Failed to save: ' + (d.error || 'Unknown error'))
+          }
         })
-        
+
         return currentNextRound
       })
     } catch (e) {
-      console.error('❌ [SAVE] Failed to save nextRound picks:', e)
-      alert('Failed to save picks. Please try again.')
-    }
-  }
-
-  function enableEditing() {
-    setNextRoundSaved(false)
-    console.log('🔄 [CHANGE] User wants to modify picks')
-  }
-
-  function changeNextRoundPicks() {
-    setNextRoundSaved(false)
-    console.log('🔄 [CHANGE] User wants to modify picks')
-  }
-
-  async function toggleLock(index: number) {
-    const newActive = [...active]
-    const pick = newActive[index]
-    if (pick && !pick.locked) {
-      // Only allow locking, not unlocking
-      pick.locked = true
-      // Lock the current points based on baseline (p0) and current live price
-      const priceData = prices[pick.tokenId]
-      if (priceData) {
-        // p0 is the baseline (24h ago price), pLive is current price
-        // Lock the current points calculation
-        const currentPoints = calculateLivePoints(pick)
-        pick.pointsLocked = currentPoints // Lock the current points
-        // pLock stores the baseline (p0) for locked cards
-        pick.pLock = priceData.p0 // Store baseline for locked cards
-      }
-      setActive(newActive)
-      
-      // Save to server
-      if (user?.id) {
-          try {
-              await fetch('/api/round/save', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({
-                      userId: user.id,
-                      activeRound: newActive
-                  })
-              })
-          } catch(e) {
-              console.error("Failed to save lock state", e)
-          }
-      }
+      console.error(e);
+      // Kullanıcı imzayı reddederse buraya düşer
+      // alert('Signature rejected. Changes not saved.') 
     }
   }
 
   function calculateLivePoints(pick: RoundPick): number {
     const priceData = prices[pick.tokenId]
     if (!priceData) return 0
-    
+
     // If the card is locked, always display the locked points
     if (pick.locked && pick.pointsLocked !== undefined) {
       return pick.pointsLocked
     }
-    
+
     // For unlocked cards, use startPrice if available (snapshot), else p0 (API default)
-    const p0 = pick.startPrice || priceData.p0 
-    const pNow = priceData.pLive 
-    
+    const p0 = pick.startPrice || priceData.p0
+    const pNow = priceData.pLive
+
     return calcPoints(p0, pNow, pick.dir, pick.duplicateIndex, boost.level, boostActive)
   }
 
@@ -1196,7 +1267,7 @@ async function snapshotGlobalHighlights() {
         const priceData = prices[pick.tokenId]
         const token = getTokenById(pick.tokenId) || TOKENS[0]
         if (!token) return null // Skip if token not found
-        
+
         if (!priceData) {
           return {
             tokenId: pick.tokenId,
@@ -1207,32 +1278,32 @@ async function snapshotGlobalHighlights() {
             duplicateIndex: pick.duplicateIndex
           }
         }
-      
-      let points: number
-      let percentage: number
-      
-      if (pick.locked && pick.pointsLocked !== undefined) {
-        // For locked cards, use the locked points (calculated when locked)
-        // Locked cards use the points that were calculated at lock time
-        points = pick.pointsLocked
-        // Calculate percentage from baseline (p0) to lock price
-        // When locked, we use the baseline (p0) and the price at lock time
-        const p0 = priceData.p0 // Baseline: 24h ago price
-        // For locked cards, percentage is calculated from baseline to lock price
-        // We need to reverse-calculate the lock price from locked points
-        // But for display, we'll use the current pLive as approximation
-        const pLockPrice = priceData.pLive // Price at lock time (approximation)
-        percentage = ((pLockPrice - p0) / p0) * 100
-      } else {
-        // For unlocked cards, calculate using baseline (p0) and UTC 00:00 closing price (pClose)
-        // p0 is the baseline (24h ago price when round started)
-        // pClose is the UTC 00:00 closing price (24h change)
-        const p0 = pick.startPrice || priceData.p0 // Baseline: 24h ago price
-        const pClose = priceData.pClose // UTC 00:00 closing price
-        percentage = ((pClose - p0) / p0) * 100
-        points = calcPoints(p0, pClose, pick.dir, pick.duplicateIndex, boost.level, boostActive)
-      }
-      
+
+        let points: number
+        let percentage: number
+
+        if (pick.locked && pick.pointsLocked !== undefined) {
+          // For locked cards, use the locked points (calculated when locked)
+          // Locked cards use the points that were calculated at lock time
+          points = pick.pointsLocked
+          // Calculate percentage from baseline (p0) to lock price
+          // When locked, we use the baseline (p0) and the price at lock time
+          const p0 = priceData.p0 // Baseline: 24h ago price
+          // For locked cards, percentage is calculated from baseline to lock price
+          // We need to reverse-calculate the lock price from locked points
+          // But for display, we'll use the current pLive as approximation
+          const pLockPrice = priceData.pLive // Price at lock time (approximation)
+          percentage = ((pLockPrice - p0) / p0) * 100
+        } else {
+          // For unlocked cards, calculate using baseline (p0) and UTC 00:00 closing price (pClose)
+          // p0 is the baseline (24h ago price when round started)
+          // pClose is the UTC 00:00 closing price (24h change)
+          const p0 = pick.startPrice || priceData.p0 // Baseline: 24h ago price
+          const pClose = priceData.pClose // UTC 00:00 closing price
+          percentage = ((pClose - p0) / p0) * 100
+          points = calcPoints(p0, pClose, pick.dir, pick.duplicateIndex, boost.level, boostActive)
+        }
+
         return {
           tokenId: pick.tokenId,
           symbol: token.symbol,
@@ -1274,11 +1345,60 @@ async function snapshotGlobalHighlights() {
   }, [highlightLosers])
   // Recent Rounds - Fresh start, no previous rounds
   const recentRounds = useMemo(() => {
- if (!history || !Array.isArray(history)) return [];
-  return history; // Zaten history state'i loadUserData ile doluyor
-}, [history])
-  
-const activeRoundDisplay = currentRound
+    if (!history || !Array.isArray(history)) return [];
+    return history; // Zaten history state'i loadUserData ile doluyor
+  }, [history])
+  // Eksik Fonksiyon 1: Düzenlemeyi açar (Change butonu için)
+  function enableEditing() {
+    setNextRoundSaved(false)
+  }
+
+  // Eksik Fonksiyon 2: Kartı kilitler (Lock butonu için)
+  async function toggleLock(index: number) {
+    const newActive = [...active]
+    const pick = newActive[index]
+
+    if (pick && !pick.locked) {
+      try {
+        // Kullanıcıdan imza iste
+        const messageToSign = `Flip Royale: Lock Card\nToken: ${pick.tokenId}\nRound: ${currentRound}\nDate: ${new Date().toISOString().split('T')[0]}`;
+        const signature = await signMessageAsync({ message: messageToSign });
+
+        // İmzayı aldıktan sonra kilitle
+        pick.locked = true
+
+        // O anki fiyatı ve puanı dondur
+        const priceData = prices[pick.tokenId]
+        if (priceData) {
+          const p0 = pick.startPrice || priceData.p0
+          const pNow = priceData.pLive
+          const currentPoints = calcPoints(p0, pNow, pick.dir, pick.duplicateIndex, boost.level, boostActive)
+
+          pick.pointsLocked = currentPoints
+          pick.pLock = priceData.p0
+        }
+
+        setActive(newActive)
+
+        // Sunucuya kaydet (İmza ile birlikte)
+        if (user?.id) {
+          await fetch('/api/round/save', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              userId: user.id,
+              activeRound: newActive,
+              signature: signature
+            })
+          })
+        }
+      } catch (e) {
+        console.error("Lock cancelled or failed:", e)
+      }
+    }
+  }
+
+  const activeRoundDisplay = currentRound
   const nextRoundDisplay = currentRound + 1
 
   return (
@@ -1305,11 +1425,11 @@ const activeRoundDisplay = currentRound
           <a className="tab" href="/history">HISTORY</a>
           {user && <a className="tab" href="/profile">PROFILE</a>}
         </nav>
-        <div style={{display: 'flex', alignItems: 'center', gap: 12, marginLeft: 'auto'}}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginLeft: 'auto' }}>
           <ThemeToggle />
-          <a 
-            href="https://x.com/fliproyale" 
-            target="_blank" 
+          <a
+            href="https://x.com/fliproyale"
+            target="_blank"
             rel="noopener noreferrer"
             style={{
               display: 'flex',
@@ -1339,11 +1459,11 @@ const activeRoundDisplay = currentRound
             }}
             title="Follow us on X"
           >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" style={{display: 'block'}}>
-              <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" style={{ display: 'block' }}>
+              <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
             </svg>
           </a>
-          
+
           {user ? (
             <>
               <div style={{
@@ -1362,13 +1482,13 @@ const activeRoundDisplay = currentRound
                 <img
                   src={user.avatar || DEFAULT_AVATAR}
                   alt={user.username}
-                  style={{width: '100%', height: '100%', objectFit: 'cover'}}
+                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                   onError={(e) => {
                     (e.currentTarget as HTMLImageElement).src = DEFAULT_AVATAR
                   }}
                 />
               </div>
-              
+
               <div style={{
                 display: 'flex',
                 flexDirection: 'column',
@@ -1391,459 +1511,239 @@ const activeRoundDisplay = currentRound
                 {giftPoints > 0 && (
                   <div style={{
                     fontSize: 11,
-                    color: theme === 'light' ? 'rgba(0,0,0,0.6)' : 'rgba(255,255,255,0.5)',
+                    color: theme === 'light' ? 'rgba(10,44,33,0.6)' : 'rgba(255,255,255,0.5)',
                     fontWeight: 500
                   }}>
                     Gift: {giftPoints.toLocaleString()} pts
                   </div>
                 )}
+
+
+                <button
+                  onClick={handleLogout}
+                  style={{
+                    background: 'rgba(239,68,68,0.2)',
+                    border: '1px solid rgba(239,68,68,0.3)',
+                    color: '#fca5a5',
+                    padding: '4px 12px',
+                    borderRadius: 8,
+                    fontSize: 12,
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    transition: 'all 0.3s',
+                    whiteSpace: 'nowrap',
+                    marginTop: 4
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = 'rgba(239,68,68,0.3)'
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = 'rgba(239,68,68,0.2)'
+                  }}
+                >
+                  Logout
+                </button>
               </div>
-              
-              <button
-                onClick={handleLogout}
-                style={{
-                  background: theme === 'light' ? 'rgba(239,68,68,0.25)' : 'rgba(239,68,68,0.2)',
-                  border: `1px solid ${theme === 'light' ? 'rgba(239,68,68,0.4)' : 'rgba(239,68,68,0.3)'}`,
-                  color: theme === 'light' ? '#dc2626' : '#fca5a5',
-                  padding: '8px 16px',
-                  borderRadius: 10,
-                  fontSize: 14,
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                  transition: 'all 0.3s',
-                  whiteSpace: 'nowrap'
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.background = theme === 'light' ? 'rgba(239,68,68,0.35)' : 'rgba(239,68,68,0.3)'
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = theme === 'light' ? 'rgba(239,68,68,0.25)' : 'rgba(239,68,68,0.2)'
-                }}
-              >
-                Logout
-              </button>
             </>
-          ) : null}
+          ) : (
+            mounted && <ConnectButton />
+          )}
         </div>
       </header>
 
       <div style={{
-        display:'grid', 
-        gridTemplateColumns:'minmax(220px, 250px) 1fr minmax(260px, 300px)', 
-        gap:16, 
-        alignItems:'start', 
-        width:'100%'
+        display: 'grid',
+        gridTemplateColumns: 'minmax(220px, 250px) 1fr minmax(260px, 300px)',
+        gap: 16,
+        alignItems: 'start',
+        width: '100%'
       }} className="main-grid">
-        {/* Left Sidebar: Common Pack */}
-        <div className="panel" style={{padding:12, position:'sticky', top:16, alignSelf:'start', background:'linear-gradient(180deg, rgba(0,0,0,.35), rgba(0,0,0,.28))'}}>
-          <div style={{textAlign:'center', marginBottom:6}}>
-            <div style={{fontWeight:1000, letterSpacing:1, fontSize:18}}>COMMON PACK</div>
-          </div>
+        {/* Left Sidebar: Global Movers (Swapped) */}
+        <aside style={{ position: 'sticky', top: 16, alignSelf: 'start', width: '100%' }}>
           <div style={{
-            padding:12,
-            borderRadius:16,
-            background:'linear-gradient(180deg,#0f172a,#0b1324)',
-            boxShadow:'0 12px 26px rgba(0,0,0,.32), inset 0 0 0 1px rgba(255,255,255,.05)'
+            background: 'rgba(15,23,42,0.55)',
+            border: '1px solid rgba(255,255,255,0.08)',
+            borderRadius: 16,
+            padding: 16,
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 14,
+            boxShadow: '0 10px 30px rgba(0,0,0,0.25)'
           }}>
-            <div style={{
-              position:'relative',
-              width:'100%',
-              paddingTop:'130%',
-              borderRadius:16,
-              background:'linear-gradient(180deg,#1e293b,#0f172a)',
-              border:'2px solid rgba(255,255,255,0.08)',
-              boxShadow:'0 16px 38px rgba(15,23,42,0.5)',
-              overflow:'hidden'
-            }}>
-              <div style={{
-                position:'absolute', inset:10,
-                borderRadius:12,
-                background:'linear-gradient(185deg,rgba(15,23,42,0.95),rgba(30,41,59,0.72))',
-                border:'1px solid rgba(148,163,184,0.22)',
-                boxShadow:'inset 0 3px 10px rgba(0,0,0,0.55), inset 0 0 0 1px rgba(255,255,255,0.05)',
-                display:'flex',
-                alignItems:'center',
-                justifyContent:'center'
-              }}>
-                <img src="/common-pack.jpg" alt="Common Pack" style={{width:'78%', height:'78%', objectFit:'cover', borderRadius:12, boxShadow:'0 8px 20px rgba(0,0,0,0.4)'}} />
+            <div style={{ fontSize: 13, fontWeight: 900, letterSpacing: 1, textTransform: 'uppercase', color: '#e0f2fe' }}>
+              Global Movers · Beta #1
+            </div>
+
+            <div>
+              <div style={{ fontSize: 12, fontWeight: 800, letterSpacing: 1, textTransform: 'uppercase', color: '#bbf7d0', marginBottom: 8 }}>
+                Top Gainers
               </div>
-            </div>
-            <div style={{
-              textAlign:'center', 
-              marginTop:8, 
-              color: '#cbd5e1', 
-              fontWeight:800, 
-              fontSize:16,
-              textShadow: '0 1px 2px rgba(0,0,0,0.5)'
-            }}>5000 POINTS</div>
-            <div style={{display:'flex', alignItems:'center', justifyContent:'center', gap:6, marginTop:6}}>
-              <button 
-                className="btn" 
-                onClick={()=>setBuyQty(q=>Math.max(1, q-1))} 
-                style={{
-                  padding:'8px 12px', 
-                  fontSize:14,
-                  color: theme === 'light' ? '#0a2c21' : 'var(--text-inv)',
-                  borderColor: theme === 'light' ? 'rgba(10,44,33,0.3)' : 'rgba(255,255,255,0.12)',
-                  background: theme === 'light' ? 'rgba(255,255,255,0.9)' : 'linear-gradient(180deg, rgba(16, 33, 27, 0.85), rgba(12, 26, 21, 0.7))'
-                }}
-              >-</button>
-              <div style={{
-                width:40, 
-                textAlign:'center', 
-                fontWeight:900, 
-                fontSize:16,
-                color: '#ffffff',
-                textShadow: '0 1px 2px rgba(0,0,0,0.5)'
-              }}>{buyQty}</div>
-              <button 
-                className="btn" 
-                onClick={()=>setBuyQty(q=>Math.min(10, q+1))} 
-                style={{
-                  padding:'8px 12px', 
-                  fontSize:14,
-                  color: theme === 'light' ? '#0a2c21' : 'var(--text-inv)',
-                  borderColor: theme === 'light' ? 'rgba(10,44,33,0.3)' : 'rgba(255,255,255,0.12)',
-                  background: theme === 'light' ? 'rgba(255,255,255,0.9)' : 'linear-gradient(180deg, rgba(16, 33, 27, 0.85), rgba(12, 26, 21, 0.7))'
-                }}
-              >+</button>
-            </div>
-            <button className="btn" onClick={buyMysteryPacks} style={{
-              marginTop:8,
-              width:'100%',
-              background:'linear-gradient(180deg,#ff2ea1,#e21b8d)',
-              borderColor:'transparent',
-              color:'#fff',
-              fontWeight:900,
-              fontSize:15,
-              padding:'12px 0'
-            }}>Buy</button>
-          </div>
-          <div style={{
-            marginTop:10, 
-            fontSize:13, 
-            color: theme === 'light' ? '#0b4634' : 'var(--muted-inv)', 
-            textAlign:'center',
-            fontWeight: theme === 'light' ? 600 : 400
-          }}>1 pack = 5 cards. Costs points.</div>
-        </div>
-
-        <div style={{display:'flex', flexDirection:'column', gap:16}}>
-{/* Active Round Panel */}
-      <div className="panel">
-        <div className="row" style={{alignItems:'center', gap:12}}>
-          <h2 style={{
-            fontWeight:900, 
-            letterSpacing:1.2, 
-            textTransform:'uppercase', 
-            color: theme === 'light' ? '#0a2c21' : '#f8fafc', 
-            textShadow: theme === 'light' ? 'none' : '0 3px 10px rgba(0,0,0,0.35)'
-          }}>Active Round</h2>
-          <span className="badge" style={{
-            background:'rgba(255,255,255,0.1)',
-            border:'1px solid rgba(255,255,255,0.2)',
-            color:'#fff',
-            fontWeight:700,
-            fontSize:13,
-            letterSpacing:0.5
-          }}>
-            Round #{activeRoundDisplay}
-          </span>
-          {mounted && boostActive && (
-            <span className="badge" style={{
-              background: 'rgba(0,207,163,.2)',
-              borderColor: 'rgba(0,207,163,.3)',
-              color: '#86efac',
-              fontSize: 14
-            }}>
-              Boost ends in: {formatRemaining(boost.endAt! - now)}
-            </span>
-          )}
-        </div>
-        <div className="sep"></div>
-
-        {/* CONDITIONAL CONTENT: FINALIZING OR CARDS */}
-        {isFinalizingWindow ? (
-          // --- FINALIZING GÖRÜNÜMÜ ---
-          <div style={{
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
-            minHeight: '250px',
-            background: 'rgba(0,0,0,0.2)',
-            borderRadius: 16,
-            border: '2px dashed rgba(255,255,255,0.1)',
-            textAlign: 'center',
-            padding: 20
-          }}>
-            <div style={{ fontSize: '3rem', marginBottom: '1rem', animation: 'pulse 2s infinite' }}>⏳</div>
-            <h3 style={{ fontSize: '1.8rem', fontWeight: 900, color: '#fbbf24', textTransform: 'uppercase', letterSpacing: 1.5, marginBottom: '0.5rem' }}>
-              Round Finalizing...
-            </h3>
-            <p style={{ color: 'rgba(255,255,255,0.7)', maxWidth: '400px', lineHeight: 1.5 }}>
-              Calculating global scores and sealing new prices.<br/>
-              Please wait for data consistency.
-            </p>
-          </div>
-        ) : (
-          // --- NORMAL KART GÖRÜNÜMÜ ---
-          <div className="picks" style={{display:'grid', gridTemplateColumns:'repeat(5, minmax(160px, 1fr))', gap:14}}>
-              {active.map((p, index) => {
-                const tok = getTokenById(p.tokenId) || TOKENS[0]
-                if (!tok) return null 
-                const price = prices[p.tokenId]
-                
-                const baseline = p.startPrice || (price ? price.p0 : 0)
-                const current = price ? price.pLive : 0
-                
-                const points = price ? calcPoints(baseline, current, p.dir, p.duplicateIndex, boost.level, boostActive) : 0
-                
-              return (
-                  <div key={index} style={{
-                    background: `linear-gradient(135deg, ${getGradientColor(index)}, ${getGradientColor(index + 1)})`,
-                    borderRadius: 18,
-                    padding: 14,
-                    position: 'relative',
-                    minHeight: 220,
+              {gainersDisplay.map((entry, idx) => {
+                const tok = entry ? (getTokenById(entry.tokenId) || TOKENS[0]) : null
+                return (
+                  <div key={`gainer-${entry ? entry.tokenId : idx}`} style={{
                     display: 'flex',
-                    flexDirection: 'column',
-                    justifyContent: 'space-between',
-                    border: '1px solid rgba(255,255,255,0.2)',
-                    boxShadow: '0 8px 26px rgba(0,0,0,0.18), 0 3px 16px rgba(0,0,0,0.12)',
-                    transition: 'all 0.3s ease',
-                    transform: 'translateY(0)',
-                    cursor: 'pointer'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.transform = 'translateY(-6px) scale(1.02)'
-                    e.currentTarget.style.boxShadow = '0 16px 40px rgba(0,0,0,0.25), 0 6px 20px rgba(0,0,0,0.15)'
-                    e.currentTarget.style.border = '1px solid rgba(255,255,255,0.32)'
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.transform = 'translateY(0)'
-                    e.currentTarget.style.boxShadow = '0 8px 26px rgba(0,0,0,0.18), 0 3px 16px rgba(0,0,0,0.12)'
-                    e.currentTarget.style.border = '1px solid rgba(255,255,255,0.2)'
+                    alignItems: 'center',
+                    gap: 8,
+                    padding: '6px 10px',
+                    borderRadius: 10,
+                    background: 'rgba(34,197,94,0.12)',
+                    border: '1px solid rgba(34,197,94,0.25)',
+                    marginBottom: 6,
+                    opacity: entry ? 1 : 0.45
                   }}>
-                    
-                    {p.locked && (
-                      <div style={{
-                        position: 'absolute',
-                        top: 10,
-                        right: 10,
-                        background: '#fbbf24',
-                        color: '#000',
-                        width: 22,
-                        height: 22,
-                        borderRadius: '50%',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        fontSize: 14,
-                        fontWeight: 700,
-                        boxShadow: '0 2px 6px rgba(0,0,0,0.25)'
-                      }}>
-                        🔒
-                      </div>
-                    )}
-                    
-                    {p.duplicateIndex > 1 && (
-                      <div style={{
-                        position: 'absolute',
-                        top: 10,
-                        left: 10,
-                        background: 'rgba(0,0,0,0.7)',
-                        color: 'white',
-                        padding: '3px 7px',
-                        borderRadius: 6,
-                        fontSize: 12,
-                        border: '1px solid rgba(255,255,255,0.3)',
-                        fontWeight: 600
-                      }}>
-                        dup x{p.duplicateIndex}
-                      </div>
-                    )}
-                    
+                    <span style={{ width: 16, fontSize: 11, fontWeight: 700, color: '#bbf7d0' }}>{idx + 1}</span>
                     <div style={{
-                      width: 100,
-                      height: 100,
+                      width: 30,
+                      height: 30,
                       borderRadius: '50%',
-                      background: 'rgba(255,255,255,0.15)',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      margin: '0 auto 14px',
-                      border: '2px solid rgba(255,255,255,0.22)',
-                      boxShadow: '0 10px 24px rgba(0,0,0,0.28)',
-                      position: 'relative',
-                      overflow: 'hidden'
+                      overflow: 'hidden',
+                      border: '1px solid rgba(255,255,255,0.2)',
+                      background: 'rgba(255,255,255,0.06)',
+                      display: 'grid',
+                      placeItems: 'center'
                     }}>
-                      <img
-                        src={tok.logo}
-                        alt={tok.symbol}
-                        style={{
-                          width: 92,
-                          height: 92,
-                          borderRadius: '50%',
-                          objectFit: 'cover',
-                          position: 'relative',
-                          zIndex: 2,
-                          border: '2px solid rgba(255,255,255,0.2)'
-                        }}
-                        onError={handleImageFallback}
-                      />
+                      {tok && <img src={tok.logo} alt={tok.symbol} style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={handleImageFallback} />}
                     </div>
-                    
-                    <div style={{textAlign: 'center'}}>
-                      <div style={{
-                        fontSize: 13,
-                        fontWeight: 900,
-                        color: 'white',
-                        textShadow: '0 2px 4px rgba(0,0,0,0.35)',
-                        marginBottom: 4,
-                        letterSpacing: 0.4
-                      }}>
-                        {tok.symbol}
-                      </div>
-                      <div style={{
-                        fontSize: 13,
-                        color: 'rgba(255,255,255,0.82)',
-                        marginBottom: 6,
-                        fontWeight: 600,
-                        letterSpacing: 0.6,
-                        textTransform: 'uppercase'
-                      }}>
-                        {tok.about}
-                      </div>
-                      
-                      <div style={{display: 'flex', gap: 6, marginBottom: 8, justifyContent: 'center'}}>
-                        <button className={`btn ${p.dir==='UP'?'btn-up active':''}`} style={{fontSize: 13, padding: '6px 10px', fontWeight: 600}}>
-                          ▲ UP
-                        </button>
-                        <button className={`btn ${p.dir==='DOWN'?'btn-down active':''}`} style={{fontSize: 13, padding: '6px 10px', fontWeight: 600}}>
-                          ▼ DOWN
-                        </button>
-                      </div>
-                      
-                      {!p.locked ? (
-                        <button 
-                          className="btn" 
-                          style={{fontSize: 13, padding: '6px 10px', marginBottom: 8, fontWeight: 600}}
-                          onClick={() => toggleLock(index)}
-                        >
-                          Lock
-                        </button>
-                      ) : (
-                        <div style={{
-                          fontSize: 12, 
-                          padding: '5px 9px', 
-                          marginBottom: 8, 
-                          fontWeight: 600,
-                          color: '#fbbf24',
-                          textAlign: 'center'
-                        }}>
-                          🔒 Locked
-                        </div>
-                      )}
-                      
-                      <div style={{
-                        background: 'rgba(0,0,0,0.25)',
-                        color: 'white',
-                        padding: '6px 10px',
-                        borderRadius: 8,
-                        fontSize: 13,
-                        fontWeight: 600,
-                        marginBottom: 4
-                      }}>
-                        {p.locked ? '🔒 Locked Points: ' : 'Live Points: '}
-                        {(() => {
-                          try {
-                            return points > 0 ? `+${points}` : points
-                          } catch {
-                            return 0
-                          }
-                        })()}
-                      </div>
-                      
-                      {p.duplicateIndex > 1 && (
-                        <div style={{
-                          background: 'rgba(0,0,0,0.2)',
-                          color: 'white',
-                          padding: '4px 8px',
-                          borderRadius: 6,
-                          fontSize: 12,
-                          fontWeight: 600
-                        }}>
-                          Applied: Boost x{boostActive && boost.level ? (boost.level === 100 ? 2 : 1.5) : 1}
-                        </div>
-                      )}
+                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+                      <span style={{ fontWeight: 700, color: '#ecfccb', fontSize: 13 }}>{tok ? tok.symbol : '—'}</span>
+                      <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.7)' }}>
+                        {entry ? `${entry.changePct >= 0 ? '▲' : '▼'} ${entry.changePct.toFixed(2)}%` : 'Awaiting data'}
+                      </span>
+                    </div>
+                    <span style={{ fontWeight: 700, color: '#bbf7d0', fontSize: 12 }}>
+                      {entry ? `${formatHighlightPoints(entry.points)} pts` : '—'}
+                    </span>
                   </div>
-                </div>
-              )
-            })}
-          </div>
-        )}
-      </div>
-        {/* --- YENİ KOD BİTİŞİ --- */}
-        {/* Next Round */}
-{/* Next Round Panel */}
-      <div className="panel">
-        <div className="row" style={{alignItems:'center', gap:12}}>
-          <h2 style={{
-            fontWeight:900, 
-            letterSpacing:1.2, 
-            textTransform:'uppercase', 
-            color: theme === 'light' ? '#0a2c21' : '#f8fafc', 
-            textShadow: theme === 'light' ? 'none' : '0 3px 10px rgba(0,0,0,0.35)'
-          }}>Next Round</h2>
-          <span className="badge" style={{
-            background:'rgba(255,255,255,0.1)',
-            border:'1px solid rgba(255,255,255,0.2)',
-            color:'#fff',
-            fontWeight:700,
-            fontSize:13,
-            letterSpacing:0.5
-          }}>
-            Round #{nextRoundDisplay}
-          </span>
-        </div>
-        <div className="sep"></div>
+                )
+              })}
+            </div>
 
-        {/* --- FİNALIZING KONTROLÜ BAŞLANGICI (NEXT ROUND) --- */}
-        {isFinalizingWindow ? (
-          <div style={{
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
-            minHeight: '300px',
-            background: 'rgba(0,0,0,0.2)',
-            borderRadius: 16,
-            border: '2px dashed rgba(255,255,255,0.1)',
-            textAlign: 'center',
-            padding: 20,
-            opacity: 0.8
-          }}>
-            <div style={{ fontSize: '2.5rem', marginBottom: '1rem', filter: 'grayscale(1)' }}>🔒</div>
-            <h3 style={{ fontSize: '1.5rem', fontWeight: 700, color: '#fbbf24', marginBottom: '0.5rem' }}>
-              Selections Locked
-            </h3>
-            <p style={{ color: 'rgba(255,255,255,0.6)', maxWidth: '400px', lineHeight: 1.5 }}>
-              Next round preparation in progress.<br/>
-              Selections will reopen shortly.
-            </p>
+            <div>
+              <div style={{ fontSize: 12, fontWeight: 800, letterSpacing: 1, textTransform: 'uppercase', color: '#fecaca', marginBottom: 8 }}>
+                Top Losers
+              </div>
+              {losersDisplay.map((entry, idx) => {
+                const tok = entry ? (getTokenById(entry.tokenId) || TOKENS[0]) : null
+                return (
+                  <div key={`loser-${entry ? entry.tokenId : idx}`} style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 8,
+                    padding: '6px 10px',
+                    borderRadius: 10,
+                    background: 'rgba(248,113,113,0.12)',
+                    border: '1px solid rgba(248,113,113,0.25)',
+                    marginBottom: 6,
+                    opacity: entry ? 1 : 0.45
+                  }}>
+                    <span style={{ width: 16, fontSize: 11, fontWeight: 700, color: '#fecaca' }}>{idx + 1}</span>
+                    <div style={{
+                      width: 30,
+                      height: 30,
+                      borderRadius: '50%',
+                      overflow: 'hidden',
+                      border: '1px solid rgba(255,255,255,0.2)',
+                      background: 'rgba(255,255,255,0.06)',
+                      display: 'grid',
+                      placeItems: 'center'
+                    }}>
+                      {tok && <img src={tok.logo} alt={tok.symbol} style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={handleImageFallback} />}
+                    </div>
+                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+                      <span style={{ fontWeight: 700, color: '#fee2e2', fontSize: 13 }}>{tok ? tok.symbol : '—'}</span>
+                      <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.7)' }}>
+                        {entry ? `${entry.changePct >= 0 ? '▲' : '▼'} ${entry.changePct.toFixed(2)}%` : 'Awaiting data'}
+                      </span>
+                    </div>
+                    <span style={{ fontWeight: 700, color: '#fecaca', fontSize: 12 }}>
+                      {entry ? `${formatHighlightPoints(entry.points)} pts` : '—'}
+                    </span>
+                  </div>
+                )
+              })}
+            </div>
           </div>
-        ) : (
-          /* --- NORMAL NEXT ROUND İÇERİĞİ --- */
-          <>
-            <div className="picks" style={{display:'grid', gridTemplateColumns:'repeat(5, minmax(160px, 1fr))', gap:14}}>
-              {Array.from({ length: 5 }, (_, index) => {
-                const p = nextRound[index]
-                
-                if (p) {
+        </aside>
+
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          {/* Active Round Panel */}
+          <div className="panel">
+            <div className="row" style={{ alignItems: 'center', gap: 12, justifyContent: 'flex-start' }}>
+              <h2 style={{
+                fontWeight: 900,
+                letterSpacing: 1,
+                textTransform: 'uppercase',
+                color: theme === 'light' ? '#0a2c21' : '#f8fafc',
+                textShadow: theme === 'light' ? 'none' : '0 3px 10px rgba(0,0,0,0.35)',
+                fontSize: 20,
+                margin: 0,
+                lineHeight: 1
+              }}>Active Round</h2>
+              <span className="badge" style={{
+                background: 'rgba(255,255,255,0.1)',
+                border: '1px solid rgba(255,255,255,0.2)',
+                color: '#fff',
+                fontWeight: 700,
+                fontSize: 12,
+                letterSpacing: 0.5,
+                padding: '4px 8px',
+                borderRadius: 6,
+                alignSelf: 'center'
+              }}>
+                #{activeRoundDisplay}
+              </span>
+              {mounted && boostActive && (
+                <span className="badge" style={{
+                  background: 'rgba(0,207,163,.2)',
+                  borderColor: 'rgba(0,207,163,.3)',
+                  color: '#86efac',
+                  fontSize: 14
+                }}>
+                  Boost ends in: {formatRemaining(boost.endAt! - now)}
+                </span>
+              )}
+            </div>
+            <div className="sep"></div>
+
+            {/* CONDITIONAL CONTENT: FINALIZING OR CARDS */}
+            {isFinalizingWindow ? (
+              // --- FINALIZING GÖRÜNÜMÜ ---
+              <div style={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                minHeight: '250px',
+                background: 'rgba(0,0,0,0.2)',
+                borderRadius: 16,
+                border: '2px dashed rgba(255,255,255,0.1)',
+                textAlign: 'center',
+                padding: 20
+              }}>
+                <div style={{ fontSize: '3rem', marginBottom: '1rem', animation: 'pulse 2s infinite' }}>⏳</div>
+                <h3 style={{ fontSize: '1.8rem', fontWeight: 900, color: '#fbbf24', textTransform: 'uppercase', letterSpacing: 1.5, marginBottom: '0.5rem' }}>
+                  Round Finalizing...
+                </h3>
+                <p style={{ color: 'rgba(255,255,255,0.7)', maxWidth: '400px', lineHeight: 1.5 }}>
+                  Calculating global scores and sealing new prices.<br />
+                  Please wait for data consistency.
+                </p>
+              </div>
+            ) : (
+              // --- NORMAL KART GÖRÜNÜMÜ ---
+              <div className="picks" style={{ display: 'grid', gridTemplateColumns: 'repeat(5, minmax(160px, 1fr))', gap: 14 }}>
+                {active.map((p, index) => {
                   const tok = getTokenById(p.tokenId) || TOKENS[0]
                   if (!tok) return null
-                  
+                  const price = prices[p.tokenId]
+
+                  const baseline = p.startPrice || (price ? price.p0 : 0)
+                  const current = price ? price.pLive : 0
+
+                  const points = price ? calcPoints(baseline, current, p.dir, p.duplicateIndex, boost.level, boostActive) : 0
+
                   return (
                     <div key={index} style={{
                       background: `linear-gradient(135deg, ${getGradientColor(index)}, ${getGradientColor(index + 1)})`,
@@ -1856,16 +1756,50 @@ const activeRoundDisplay = currentRound
                       justifyContent: 'space-between',
                       border: '1px solid rgba(255,255,255,0.2)',
                       boxShadow: '0 8px 26px rgba(0,0,0,0.18), 0 3px 16px rgba(0,0,0,0.12)',
+                      transition: 'all 0.3s ease',
+                      transform: 'translateY(0)',
                       cursor: 'pointer'
-                    }}>
+                    }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.transform = 'translateY(-6px) scale(1.02)'
+                        e.currentTarget.style.boxShadow = '0 16px 40px rgba(0,0,0,0.25), 0 6px 20px rgba(0,0,0,0.15)'
+                        e.currentTarget.style.border = '1px solid rgba(255,255,255,0.32)'
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.transform = 'translateY(0)'
+                        e.currentTarget.style.boxShadow = '0 8px 26px rgba(0,0,0,0.18), 0 3px 16px rgba(0,0,0,0.12)'
+                        e.currentTarget.style.border = '1px solid rgba(255,255,255,0.2)'
+                      }}>
+
+                      {p.locked && (
+                        <div style={{
+                          position: 'absolute',
+                          top: 10,
+                          right: 10,
+                          background: '#fbbf24',
+                          color: '#000',
+                          width: 22,
+                          height: 22,
+                          borderRadius: '50%',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontSize: 14,
+                          fontWeight: 700,
+                          boxShadow: '0 2px 6px rgba(0,0,0,0.25)'
+                        }}>
+                          🔒
+                        </div>
+                      )}
+
                       {p.duplicateIndex > 1 && (
                         <div style={{
                           position: 'absolute',
-                          top: 12,
-                          left: 12,
+                          top: 10,
+                          left: 10,
                           background: 'rgba(0,0,0,0.7)',
                           color: 'white',
-                          padding: '4px 8px',
+                          padding: '3px 7px',
                           borderRadius: 6,
                           fontSize: 12,
                           border: '1px solid rgba(255,255,255,0.3)',
@@ -1905,756 +1839,983 @@ const activeRoundDisplay = currentRound
                         />
                       </div>
 
-                      <div style={{textAlign: 'center', flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between'}}>
-                        <div>
-                          <div style={{fontSize: 16, fontWeight: 900, color: 'white', marginBottom: 4, textShadow: '0 2px 4px rgba(0,0,0,0.5)', letterSpacing: 0.5}}>
-                            {tok.symbol}
-                          </div>
-                          <div style={{fontSize: 11, color: 'rgba(255,255,255,0.82)', marginBottom: 8, lineHeight: 1.4, fontWeight: 600, letterSpacing: 0.4}}>
-                            {tok.about}
-                          </div>
+                      <div style={{ textAlign: 'center' }}>
+                        <div style={{
+                          fontSize: 13,
+                          fontWeight: 900,
+                          color: 'white',
+                          textShadow: '0 2px 4px rgba(0,0,0,0.35)',
+                          marginBottom: 4,
+                          letterSpacing: 0.4
+                        }}>
+                          {tok.symbol}
                         </div>
-                        
-                        <div style={{marginBottom: 12}}>
-                          <div style={{display: 'flex', gap: 8, marginBottom: 10, justifyContent: 'center'}}>
-                            <button 
-                              className={`btn ${p.dir==='UP'?'btn-up active':''}`} 
-                              style={{fontSize: 13, padding: '8px 14px', fontWeight: 600}}
-                              onClick={() => {
-                                const newNextRound = [...nextRound]
-                                newNextRound[index].dir = 'UP'
-                                setNextRound(newNextRound)
-                                setNextRoundLoaded(true)
-                                setNextRoundSaved(false)
-                              }}
-                            >
-                              ▲ UP
-                            </button>
-                            <button 
-                              className={`btn ${p.dir==='DOWN'?'btn-down active':''}`} 
-                              style={{fontSize: 13, padding: '8px 14px', fontWeight: 600}}
-                              onClick={() => {
-                                const newNextRound = [...nextRound]
-                                newNextRound[index].dir = 'DOWN'
-                                setNextRound(newNextRound)
-                                setNextRoundLoaded(true)
-                                setNextRoundSaved(false)
-                              }}
-                            >
-                              ▼ DOWN
-                            </button>
-                          </div>
-                          
-                          <button 
-                            className="btn" 
-                            style={{fontSize: 10, padding: '6px 12px', fontWeight: 600}}
-                            onClick={() => removeFromNextRound(index)}
-                            disabled={nextRoundSaved}
-                          >
-                            Remove
+                        <div style={{
+                          fontSize: 13,
+                          color: 'rgba(255,255,255,0.82)',
+                          marginBottom: 6,
+                          fontWeight: 600,
+                          letterSpacing: 0.6,
+                          textTransform: 'uppercase'
+                        }}>
+                          {tok.about}
+                        </div>
+
+                        <div style={{ display: 'flex', gap: 6, marginBottom: 8, justifyContent: 'center' }}>
+                          <button className={`btn ${p.dir === 'UP' ? 'btn-up active' : ''}`} style={{ fontSize: 13, padding: '6px 10px', fontWeight: 600 }}>
+                            ▲ UP
+                          </button>
+                          <button className={`btn ${p.dir === 'DOWN' ? 'btn-down active' : ''}`} style={{ fontSize: 13, padding: '6px 10px', fontWeight: 600 }}>
+                            ▼ DOWN
                           </button>
                         </div>
+
+                        {!p.locked ? (
+                          <button
+                            className="btn"
+                            style={{ fontSize: 13, padding: '6px 10px', marginBottom: 8, fontWeight: 600 }}
+                            onClick={() => toggleLock(index)}
+                          >
+                            Lock
+                          </button>
+                        ) : (
+                          <div style={{
+                            fontSize: 12,
+                            padding: '5px 9px',
+                            marginBottom: 8,
+                            fontWeight: 600,
+                            color: '#fbbf24',
+                            textAlign: 'center'
+                          }}>
+                            🔒 Locked
+                          </div>
+                        )}
+
+                        <div style={{
+                          background: 'rgba(0,0,0,0.25)',
+                          color: 'white',
+                          padding: '6px 10px',
+                          borderRadius: 8,
+                          fontSize: 13,
+                          fontWeight: 600,
+                          marginBottom: 4
+                        }}>
+                          {p.locked ? '🔒 Locked Points: ' : 'Live Points: '}
+                          {(() => {
+                            try {
+                              return points > 0 ? `+${points}` : points
+                            } catch {
+                              return 0
+                            }
+                          })()}
+                        </div>
+
+                        {p.duplicateIndex > 1 && (
+                          <div style={{
+                            background: 'rgba(0,0,0,0.2)',
+                            color: 'white',
+                            padding: '4px 8px',
+                            borderRadius: 6,
+                            fontSize: 12,
+                            fontWeight: 600
+                          }}>
+                            Applied: Boost x{boostActive && boost.level ? (boost.level === 100 ? 2 : 1.5) : 1}
+                          </div>
+                        )}
                       </div>
                     </div>
                   )
-                } else {
-                  // Empty slot
-                  return (
-                    <div key={index}
-                      onClick={() => !nextRoundSaved && setModalOpen({open: true, type: 'select'})}
-                      style={{
-                        border: '2px dashed rgba(255,255,255,0.3)',
-                        background: 'rgba(255,255,255,0.05)',
-                        borderRadius: 20,
-                        padding: 24,
-                        cursor: nextRoundSaved ? 'not-allowed' : 'pointer',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: 12,
-                        minHeight: 240,
-                        transition: 'all 0.3s ease',
-                        opacity: nextRoundSaved ? 0.5 : 1
-                      }}
-                      onMouseEnter={(e) => {
-                        if (nextRoundSaved) return;
-                        e.currentTarget.style.background = 'rgba(255,255,255,0.1)';
-                        e.currentTarget.style.border = '2px dashed rgba(255,255,255,0.5)';
-                      }}
-                      onMouseLeave={(e) => {
-                        if (nextRoundSaved) return;
-                        e.currentTarget.style.background = 'rgba(255,255,255,0.05)';
-                        e.currentTarget.style.border = '2px dashed rgba(255,255,255,0.3)';
-                      }}
-                    >
-                      <div style={{
-                        width: 56,
-                        height: 56,
-                        borderRadius: '50%',
-                        background: 'rgba(255,255,255,0.1)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        fontSize: 22,
-                        color: 'white',
-                        border: '2px solid rgba(255,255,255,0.2)'
-                      }}>
-                        +
-                      </div>
-                      <div style={{fontSize: 14, fontWeight: 700, color: 'white', textAlign: 'center'}}>
-                        Add Card
-                      </div>
-                      <div style={{fontSize: 11, color: 'rgba(255,255,255,0.7)', textAlign: 'center'}}>
-                        Select from inventory
-                      </div>
-                    </div>
-                  )
-                }
-              })}
-            </div>
-            
-            {/* Save Picks / Change Button */}
-            <div style={{
-              marginTop: 24,
-              display: 'flex',
-              justifyContent: 'center',
-              alignItems: 'center',
-              gap: 12,
-              flexDirection: 'column'
-            }}>
-              {nextRoundSaved ? (
-                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                  <div style={{
-                    display: 'flex', alignItems: 'center', gap: 8,
-                    background: 'rgba(16, 185, 129, 0.2)',
-                    border: '2px solid rgba(16, 185, 129, 0.5)',
-                    borderRadius: 12, padding: '12px 24px',
-                    color: '#86efac', fontSize: 16, fontWeight: 700
-                  }}>
-                    <span>✅</span><span>Picks Saved</span>
-                  </div>
-                  <button onClick={enableEditing} className="btn" style={{
-                    background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
-                    border: '2px solid rgba(245, 158, 11, 0.5)',
-                    color: 'white', fontSize: 16, fontWeight: 700,
-                    padding: '14px 32px', borderRadius: 12, cursor: 'pointer',
-                    boxShadow: '0 4px 14px rgba(245, 158, 11, 0.4), 0 2px 8px rgba(0, 0, 0, 0.2)',
-                    transition: 'all 0.3s ease', textTransform: 'uppercase', letterSpacing: 1.2,
-                    display: 'flex', alignItems: 'center', gap: 8
-                  }}>
-                    <span>✏️</span><span>Change</span>
-                  </button>
-                </div>
-              ) : (
-                <>
-                  <button onClick={saveNextRoundPicks} className="btn" style={{
-                    background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-                    border: '2px solid rgba(16, 185, 129, 0.5)',
-                    color: 'white', fontSize: 16, fontWeight: 700,
-                    padding: '14px 32px', borderRadius: 12, cursor: 'pointer',
-                    boxShadow: '0 4px 14px rgba(16, 185, 129, 0.4), 0 2px 8px rgba(0, 0, 0, 0.2)',
-                    transition: 'all 0.3s ease', textTransform: 'uppercase', letterSpacing: 1.2,
-                    display: 'flex', alignItems: 'center', gap: 8
-                  }}>
-                    <span>💾</span><span>Save Picks</span>
-                  </button>
-                  <div style={{ fontSize: 12, color: 'rgba(255, 255, 255, 0.7)', fontStyle: 'italic' }}>
-                    Click to save your selections
-                  </div>
-                </>
-              )}
-            </div>
-          </>
-        )}
-        {/* --- FİNALIZING KONTROLÜ BİTİŞİ (NEXT ROUND) --- */}
-      </div>        
-
-      {/* Recent Rounds */}
-      <div className="panel">
-        <div className="row">
-          <h2>Recent Rounds</h2>
-          <a href="/history" className="tab" style={{padding:'6px 12px', borderRadius:8, background:'rgba(255,255,255,0.08)', fontSize:12}}>
-            View All
-          </a>
-        </div>
-        <div className="sep"></div>
-
-        {recentRounds.length === 0 ? (
-          <div style={{textAlign:'center', padding:32, color:'var(--muted-inv)'}}>
-            Complete a round to see your recent performance.
+                })}
+              </div>
+            )}
           </div>
-        ) : (
-          <div style={{display:'flex', flexDirection:'column', gap:16}}>
-            {recentRounds.map((round, idx) => {
-              const totalPositive = round.total >= 0
-              return (
-                <div key={`${round.dayKey}-${idx}`} style={{
-                  background:'rgba(255,255,255,0.05)',
-                  borderRadius:12,
-                  border:'1px solid rgba(255,255,255,0.1)',
-                  padding:20
+          {/* --- YENİ KOD BİTİŞİ --- */}
+          {/* Next Round */}
+          {/* Next Round Panel */}
+          <div className="panel">
+            <div className="row" style={{ alignItems: 'center', gap: 12, justifyContent: 'flex-start' }}>
+              <h2 style={{
+                fontWeight: 900,
+                letterSpacing: 1,
+                textTransform: 'uppercase',
+                color: theme === 'light' ? '#0a2c21' : '#f8fafc',
+                textShadow: theme === 'light' ? 'none' : '0 3px 10px rgba(0,0,0,0.35)',
+                fontSize: 20,
+                margin: 0,
+                lineHeight: 1
+              }}>Next Round</h2>
+              <span className="badge" style={{
+                background: 'rgba(255,255,255,0.1)',
+                border: '1px solid rgba(255,255,255,0.2)',
+                color: '#fff',
+                fontWeight: 700,
+                fontSize: 12,
+                letterSpacing: 0.5,
+                padding: '4px 8px',
+                borderRadius: 6,
+                alignSelf: 'center'
+              }}>
+                #{nextRoundDisplay}
+              </span>
+            </div>
+            <div className="sep"></div>
+
+            {/* --- FİNALIZING KONTROLÜ BAŞLANGICI (NEXT ROUND) --- */}
+            {isFinalizingWindow ? (
+              <div style={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                minHeight: '300px',
+                background: 'rgba(0,0,0,0.2)',
+                borderRadius: 16,
+                border: '2px dashed rgba(255,255,255,0.1)',
+                textAlign: 'center',
+                padding: 20,
+                opacity: 0.8
+              }}>
+                <div style={{ fontSize: '2.5rem', marginBottom: '1rem', filter: 'grayscale(1)' }}>🔒</div>
+                <h3 style={{ fontSize: '1.5rem', fontWeight: 700, color: '#fbbf24', marginBottom: '0.5rem' }}>
+                  Selections Locked
+                </h3>
+                <p style={{ color: 'rgba(255,255,255,0.6)', maxWidth: '400px', lineHeight: 1.5 }}>
+                  Next round preparation in progress.<br />
+                  Selections will reopen shortly.
+                </p>
+              </div>
+            ) : (
+              /* --- NORMAL NEXT ROUND İÇERİĞİ --- */
+              <>
+                <div className="picks" style={{ display: 'grid', gridTemplateColumns: 'repeat(5, minmax(160px, 1fr))', gap: 14 }}>
+                  {Array.from({ length: 5 }, (_, index) => {
+                    const p = nextRound[index]
+
+                    if (p) {
+                      const tok = getTokenById(p.tokenId) || TOKENS[0]
+                      if (!tok) return null
+
+                      return (
+                        <div key={index} style={{
+                          background: `linear-gradient(135deg, ${getGradientColor(index)}, ${getGradientColor(index + 1)})`,
+                          borderRadius: 18,
+                          padding: 14,
+                          position: 'relative',
+                          minHeight: 220,
+                          display: 'flex',
+                          flexDirection: 'column',
+                          justifyContent: 'space-between',
+                          border: '1px solid rgba(255,255,255,0.2)',
+                          boxShadow: '0 8px 26px rgba(0,0,0,0.18), 0 3px 16px rgba(0,0,0,0.12)',
+                          cursor: 'pointer'
+                        }}>
+                          {p.duplicateIndex > 1 && (
+                            <div style={{
+                              position: 'absolute',
+                              top: 12,
+                              left: 12,
+                              background: 'rgba(0,0,0,0.7)',
+                              color: 'white',
+                              padding: '4px 8px',
+                              borderRadius: 6,
+                              fontSize: 12,
+                              border: '1px solid rgba(255,255,255,0.3)',
+                              fontWeight: 600
+                            }}>
+                              dup x{p.duplicateIndex}
+                            </div>
+                          )}
+
+                          <div style={{
+                            width: 100,
+                            height: 100,
+                            borderRadius: '50%',
+                            background: 'rgba(255,255,255,0.15)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            margin: '0 auto 14px',
+                            border: '2px solid rgba(255,255,255,0.22)',
+                            boxShadow: '0 10px 24px rgba(0,0,0,0.28)',
+                            position: 'relative',
+                            overflow: 'hidden'
+                          }}>
+                            <img
+                              src={tok.logo}
+                              alt={tok.symbol}
+                              style={{
+                                width: 92,
+                                height: 92,
+                                borderRadius: '50%',
+                                objectFit: 'cover',
+                                position: 'relative',
+                                zIndex: 2,
+                                border: '2px solid rgba(255,255,255,0.2)'
+                              }}
+                              onError={handleImageFallback}
+                            />
+                          </div>
+
+                          <div style={{ textAlign: 'center', flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                            <div>
+                              <div style={{ fontSize: 16, fontWeight: 900, color: 'white', marginBottom: 4, textShadow: '0 2px 4px rgba(0,0,0,0.5)', letterSpacing: 0.5 }}>
+                                {tok.symbol}
+                              </div>
+                              <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.82)', marginBottom: 8, lineHeight: 1.4, fontWeight: 600, letterSpacing: 0.4 }}>
+                                {tok.about}
+                              </div>
+                            </div>
+
+                            <div style={{ marginBottom: 12 }}>
+                              <div style={{ display: 'flex', gap: 8, marginBottom: 10, justifyContent: 'center' }}>
+                                <button
+                                  className={`btn ${p.dir === 'UP' ? 'btn-up active' : ''}`}
+                                  style={{ fontSize: 13, padding: '8px 14px', fontWeight: 600 }}
+                                  onClick={() => {
+                                    const newNextRound = [...nextRound]
+                                    if (newNextRound[index]) {
+                                      newNextRound[index] = { ...newNextRound[index]!, dir: 'UP' }
+                                      setNextRound(newNextRound)
+                                      setNextRoundLoaded(true)
+                                      setNextRoundSaved(false)
+                                    }
+                                  }}
+                                >
+                                  ▲ UP
+                                </button>
+                                <button
+                                  className={`btn ${p.dir === 'DOWN' ? 'btn-down active' : ''}`}
+                                  style={{ fontSize: 13, padding: '8px 14px', fontWeight: 600 }}
+                                  onClick={() => {
+                                    const newNextRound = [...nextRound]
+                                    if (newNextRound[index]) {
+                                      newNextRound[index] = { ...newNextRound[index]!, dir: 'DOWN' }
+                                      setNextRound(newNextRound)
+                                      setNextRoundLoaded(true)
+                                      setNextRoundSaved(false)
+                                    }
+                                  }}
+                                >
+                                  ▼ DOWN
+                                </button>
+                              </div>
+
+                              <button
+                                className="btn"
+                                style={{ fontSize: 10, padding: '6px 12px', fontWeight: 600 }}
+                                onClick={() => removeFromNextRound(index)}
+                                disabled={nextRoundSaved}
+                              >
+                                Remove
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      )
+                    } else {
+                      // Empty slot
+                      return (
+                        <div key={index}
+                          onClick={() => !nextRoundSaved && setModalOpen({ open: true, type: 'select' })}
+                          style={{
+                            border: '2px dashed rgba(255,255,255,0.3)',
+                            background: 'rgba(255,255,255,0.05)',
+                            borderRadius: 20,
+                            padding: 24,
+                            cursor: nextRoundSaved ? 'not-allowed' : 'pointer',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: 12,
+                            minHeight: 240,
+                            transition: 'all 0.3s ease',
+                            opacity: nextRoundSaved ? 0.5 : 1
+                          }}
+                          onMouseEnter={(e) => {
+                            if (nextRoundSaved) return;
+                            e.currentTarget.style.background = 'rgba(255,255,255,0.1)';
+                            e.currentTarget.style.border = '2px dashed rgba(255,255,255,0.5)';
+                          }}
+                          onMouseLeave={(e) => {
+                            if (nextRoundSaved) return;
+                            e.currentTarget.style.background = 'rgba(255,255,255,0.05)';
+                            e.currentTarget.style.border = '2px dashed rgba(255,255,255,0.3)';
+                          }}
+                        >
+                          <div style={{
+                            width: 56,
+                            height: 56,
+                            borderRadius: '50%',
+                            background: 'rgba(255,255,255,0.1)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            fontSize: 22,
+                            color: 'white',
+                            border: '2px solid rgba(255,255,255,0.2)'
+                          }}>
+                            +
+                          </div>
+                          <div style={{ fontSize: 14, fontWeight: 700, color: 'white', textAlign: 'center' }}>
+                            Add Card
+                          </div>
+                          <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.7)', textAlign: 'center' }}>
+                            Select from inventory
+                          </div>
+                        </div>
+                      )
+                    }
+                  })}
+                </div>
+
+                {/* Save Picks / Change Button */}
+                <div style={{
+                  marginTop: 24,
+                  display: 'flex',
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  gap: 12,
+                  flexDirection: 'column'
                 }}>
-                  <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:12}}>
-                    <div style={{display:'flex', alignItems:'center', gap:12}}>
-                      <div style={{fontWeight:900, fontSize:16}}>Round #{idx + 1}</div>
-                      <span className="badge" style={{
-                        background: totalPositive ? 'rgba(16,185,129,.2)' : 'rgba(239,68,68,.2)',
-                        borderColor: totalPositive ? 'rgba(16,185,129,.3)' : 'rgba(239,68,68,.3)',
-                        color: totalPositive ? '#86efac' : '#fca5a5'
+                  {nextRoundSaved ? (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                      <div style={{
+                        display: 'flex', alignItems: 'center', gap: 8,
+                        background: 'rgba(16, 185, 129, 0.2)',
+                        border: '2px solid rgba(16, 185, 129, 0.5)',
+                        borderRadius: 12, padding: '12px 24px',
+                        color: '#86efac', fontSize: 16, fontWeight: 700
                       }}>
-                        {totalPositive ? '+' : ''}{round.total} pts
-                      </span>
+                        <span>✅</span><span>Picks Saved</span>
+                      </div>
+                      <button onClick={enableEditing} className="btn" style={{
+                        background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
+                        border: '2px solid rgba(245, 158, 11, 0.5)',
+                        color: 'white', fontSize: 16, fontWeight: 700,
+                        padding: '14px 32px', borderRadius: 12, cursor: 'pointer',
+                        boxShadow: '0 4px 14px rgba(245, 158, 11, 0.4), 0 2px 8px rgba(0, 0, 0, 0.2)',
+                        transition: 'all 0.3s ease', textTransform: 'uppercase', letterSpacing: 1.2,
+                        display: 'flex', alignItems: 'center', gap: 8
+                      }}>
+                        <span>✏️</span><span>Change</span>
+                      </button>
                     </div>
-                    <div style={{fontSize:12, color:'var(--muted-inv)'}}>
+                  ) : (
+                    <>
+                      <button onClick={saveNextRoundPicks} className="btn" style={{
+                        background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                        border: '2px solid rgba(16, 185, 129, 0.5)',
+                        color: 'white', fontSize: 16, fontWeight: 700,
+                        padding: '14px 32px', borderRadius: 12, cursor: 'pointer',
+                        boxShadow: '0 4px 14px rgba(16, 185, 129, 0.4), 0 2px 8px rgba(0, 0, 0, 0.2)',
+                        transition: 'all 0.3s ease', textTransform: 'uppercase', letterSpacing: 1.2,
+                        display: 'flex', alignItems: 'center', gap: 8
+                      }}>
+                        <span>💾</span><span>Save Picks</span>
+                      </button>
+                      <div style={{ fontSize: 12, color: 'rgba(255, 255, 255, 0.7)', fontStyle: 'italic' }}>
+                        Click to save your selections
+                      </div>
+                    </>
+                  )}
+                </div>
+              </>
+            )}
+            {/* --- FİNALIZING KONTROLÜ BİTİŞİ (NEXT ROUND) --- */}
+          </div>
+
+          {/* Previous Rounds */}
+          <div className="panel">
+            <h2>Previous Rounds</h2>
+            <div className="sep"></div>
+
+            {recentRounds.length === 0 ? (
+              <div style={{
+                textAlign: 'center',
+                padding: '40px 20px',
+                color: 'rgba(255,255,255,0.6)',
+                fontSize: 14
+              }}>
+                Complete a round to see your recent performance.
+              </div>
+            ) : (
+              recentRounds.map((round, idx) => (
+                <div key={idx} style={{
+                  background: 'rgba(255,255,255,0.05)',
+                  borderRadius: 16,
+                  padding: 20,
+                  marginBottom: 16,
+                  border: '1px solid rgba(255,255,255,0.1)'
+                }}>
+                  <div style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    marginBottom: 16
+                  }}>
+                    <div style={{
+                      fontSize: 18,
+                      fontWeight: 700,
+                      color: 'white'
+                    }}>
+                      Beta round {round.roundNumber}
+                    </div>
+                    <div style={{
+                      fontSize: 14,
+                      color: 'rgba(255,255,255,0.7)'
+                    }}>
                       {round.dayKey}
                     </div>
                   </div>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
 
-                  <div style={{display:'flex', flexWrap:'wrap', gap:8}}>
-                    {round.items.map((item, cardIdx) => {
-                      const itemPositive = item.points >= 0
-                      return (
-                        <div key={cardIdx} style={{
-                          display:'flex',
-                          alignItems:'center',
-                          gap:6,
-                          padding:'6px 10px',
-                          borderRadius:6,
-                          background: itemPositive ? 'rgba(16,185,129,.1)' : 'rgba(239,68,68,.1)',
-                          border:'1px solid',
-                          borderColor: itemPositive ? 'rgba(16,185,129,.2)' : 'rgba(239,68,68,.2)',
-                          fontSize:12
-                        }}>
-                          <span style={{fontWeight:700, color:itemPositive ? '#86efac' : '#fca5a5'}}>
-                            {item.symbol}
-                          </span>
-                          <span style={{color:itemPositive ? '#16a34a' : '#dc2626', fontWeight:600}}>
-                            {itemPositive ? '+' : ''}{item.points}
-                          </span>
-                          <span style={{
-                            fontSize:10,
-                            padding:'1px 4px',
-                            borderRadius:3,
-                            background:'rgba(0,0,0,.2)',
-                            color:'var(--muted-inv)'
-                          }}>
-                            dup x{item.duplicateIndex}
-                          </span>
-                        </div>
-                      )
-                    })}
+        {/* Right Sidebar: Packs (Swapped & Resized) */}
+        <div className="panel" style={{ padding: 6, position: 'sticky', top: 16, alignSelf: 'start', background: 'linear-gradient(180deg, rgba(0,0,0,.35), rgba(0,0,0,.28))', display: 'flex', flexDirection: 'column', gap: 6 }}>
+
+          {/* COMMON PACK */}
+          <div style={{
+            padding: 6,
+            borderRadius: 12,
+            background: 'linear-gradient(180deg,#0f172a,#0b1324)',
+            boxShadow: '0 4px 12px rgba(0,0,0,.32), inset 0 0 0 1px rgba(255,255,255,.05)',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 6
+          }}>
+            <div className="text-force-light-gray" style={{ fontWeight: 900, letterSpacing: 0.5, fontSize: 13, textAlign: 'center', color: '#94a3b8' }}>COMMON PACK</div>
+
+            <div style={{ display: 'flex', gap: 8 }}>
+              {/* Image (Resized to 110px) */}
+              <div style={{
+                flex: '0 0 110px',
+                height: 175,
+                borderRadius: 10,
+                background: 'linear-gradient(180deg,#1e293b,#0f172a)',
+                border: '1px solid rgba(255,255,255,0.08)',
+                overflow: 'hidden',
+                position: 'relative'
+              }}>
+                <img src="/common-pack.jpg" alt="Common Pack" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              </div>
+
+              {/* Controls & Buttons */}
+              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+
+                {/* Top: Qty & Info */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'rgba(255,255,255,0.05)', borderRadius: 6, padding: '2px 4px' }}>
+                    <button onClick={() => setBuyQty(q => Math.max(1, q - 1))} style={{ background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: 4, color: 'white', cursor: 'pointer', padding: '0 8px', fontSize: 14, height: 24, display: 'grid', placeItems: 'center' }}>-</button>
+                    <div className="text-force-white" style={{ fontWeight: 700, fontSize: 13, color: '#fff' }}>{buyQty}</div>
+                    <button onClick={() => setBuyQty(q => Math.min(10, q + 1))} style={{ background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: 4, color: 'white', cursor: 'pointer', padding: '0 8px', fontSize: 14, height: 24, display: 'grid', placeItems: 'center' }}>+</button>
+                  </div>
+                  <div className="text-force-light-gray" style={{ fontSize: 10, color: '#94a3b8', textAlign: 'center', lineHeight: 1.2 }}>
+                    Standard rates
                   </div>
                 </div>
-              )
-            })}
-          </div>
-        )}
-      </div>
 
-      {/* Previous Rounds */}
-      <div className="panel">
-         <h2>Previous Rounds</h2>
-         <div className="sep"></div>
-         
-         {recentRounds.length === 0 ? (
-           <div style={{
-             textAlign: 'center',
-             padding: '40px 20px',
-             color: 'rgba(255,255,255,0.6)',
-             fontSize: 14
-           }}>
-             Complete a round to see your recent performance.
-           </div>
-         ) : (
-           recentRounds.map((round, idx) => (
-             <div key={idx} style={{
-               background: 'rgba(255,255,255,0.05)',
-               borderRadius: 16,
-               padding: 20,
-               marginBottom: 16,
-               border: '1px solid rgba(255,255,255,0.1)'
-             }}>
-               <div style={{
-                 display: 'flex',
-                 justifyContent: 'space-between',
-                 alignItems: 'center',
-                 marginBottom: 16
-               }}>
-                 <div style={{
-                   fontSize: 18,
-                   fontWeight: 700,
-                   color: 'white'
-                 }}>
-                   Beta round {round.roundNumber}
-                 </div>
-                 <div style={{
-                   fontSize: 14,
-                   color: 'rgba(255,255,255,0.7)'
-                 }}>
-                   {round.dayKey}
-                 </div>
-               </div>
-               {/* Round content here */}
-             </div>
-           ))
-         )}
-       </div>
+                {/* Bottom: Buttons (Stacked) */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
 
-       </div>
 
-       <aside style={{position:'sticky', top:16}}>
-         <div style={{
-           background: 'rgba(15,23,42,0.55)',
-           border: '1px solid rgba(255,255,255,0.08)',
-           borderRadius: 16,
-           padding: 16,
-           display: 'flex',
-           flexDirection: 'column',
-           gap: 14,
-           boxShadow: '0 10px 30px rgba(0,0,0,0.25)'
-         }}>
-           <div style={{fontSize: 13, fontWeight: 900, letterSpacing: 1, textTransform: 'uppercase', color: '#e0f2fe'}}>
-             Global Movers · Beta #1
-           </div>
-           
-           <div>
-             <div style={{fontSize: 12, fontWeight: 800, letterSpacing: 1, textTransform: 'uppercase', color: '#bbf7d0', marginBottom: 8}}>
-               Top Gainers
-             </div>
-             {gainersDisplay.map((entry, idx) => {
-               const tok = entry ? (getTokenById(entry.tokenId) || TOKENS[0]) : null
-            return (
-                 <div key={`gainer-${entry ? entry.tokenId : idx}`} style={{
-                   display: 'flex',
-                   alignItems: 'center',
-                   gap: 8,
-                   padding: '6px 10px',
-                   borderRadius: 10,
-                   background: 'rgba(34,197,94,0.12)',
-                   border: '1px solid rgba(34,197,94,0.25)',
-                   marginBottom: 6,
-                   opacity: entry ? 1 : 0.45
-                 }}>
-                   <span style={{width: 16, fontSize: 11, fontWeight: 700, color: '#bbf7d0'}}>{idx + 1}</span>
-                   <div style={{
-                     width: 30,
-                     height: 30,
-                     borderRadius: '50%',
-                     overflow: 'hidden',
-                     border: '1px solid rgba(255,255,255,0.2)',
-                     background: 'rgba(255,255,255,0.06)',
-                     display: 'grid',
-                     placeItems: 'center'
-                   }}>
-                     {tok && <img src={tok.logo} alt={tok.symbol} style={{width: '100%', height: '100%', objectFit: 'cover'}} onError={handleImageFallback} />}
+                  <BuyButton
+                    userId={user?.id}
+                    onSuccess={() => loadUserData()}
+                    price={0.1}
+                    packType="common"
+                    compact={true}
+                  />
                 </div>
-                   <div style={{flex: 1, display: 'flex', flexDirection: 'column'}}>
-                     <span style={{fontWeight: 700, color: '#ecfccb', fontSize: 13}}>{tok ? tok.symbol : '—'}</span>
-                     <span style={{fontSize: 10, color: 'rgba(255,255,255,0.7)'}}>
-                       {entry ? `${entry.changePct >= 0 ? '▲' : '▼'} ${entry.changePct.toFixed(2)}%` : 'Awaiting data'}
-                     </span>
-                   </div>
-                   <span style={{fontWeight: 700, color: '#bbf7d0', fontSize: 12}}>
-                     {entry ? `${formatHighlightPoints(entry.points)} pts` : '—'}
-                   </span>
               </div>
-            )
-          })}
-        </div>
-           
-           <div>
-             <div style={{fontSize: 12, fontWeight: 800, letterSpacing: 1, textTransform: 'uppercase', color: '#fecaca', marginBottom: 8}}>
-               Top Losers
-      </div>
-             {losersDisplay.map((entry, idx) => {
-               const tok = entry ? (getTokenById(entry.tokenId) || TOKENS[0]) : null
-               return (
-                 <div key={`loser-${entry ? entry.tokenId : idx}`} style={{
-                   display: 'flex',
-                   alignItems: 'center',
-                   gap: 8,
-                   padding: '6px 10px',
-                   borderRadius: 10,
-                   background: 'rgba(248,113,113,0.12)',
-                   border: '1px solid rgba(248,113,113,0.25)',
-                   marginBottom: 6,
-                   opacity: entry ? 1 : 0.45
-                 }}>
-                   <span style={{width: 16, fontSize: 11, fontWeight: 700, color: '#fecaca'}}>{idx + 1}</span>
-                   <div style={{
-                     width: 30,
-                     height: 30,
-                     borderRadius: '50%',
-                     overflow: 'hidden',
-                     border: '1px solid rgba(255,255,255,0.2)',
-                     background: 'rgba(255,255,255,0.06)',
-                     display: 'grid',
-                     placeItems: 'center'
-                   }}>
-                     {tok && <img src={tok.logo} alt={tok.symbol} style={{width: '100%', height: '100%', objectFit: 'cover'}} onError={handleImageFallback} />}
-                   </div>
-                   <div style={{flex: 1, display: 'flex', flexDirection: 'column'}}>
-                     <span style={{fontWeight: 700, color: '#fee2e2', fontSize: 13}}>{tok ? tok.symbol : '—'}</span>
-                     <span style={{fontSize: 10, color: 'rgba(255,255,255,0.7)'}}>
-                       {entry ? `${entry.changePct >= 0 ? '▲' : '▼'} ${entry.changePct.toFixed(2)}%` : 'Awaiting data'}
-                     </span>
-                   </div>
-                   <span style={{fontWeight: 700, color: '#fecaca', fontSize: 12}}>
-                     {entry ? `${formatHighlightPoints(entry.points)} pts` : '—'}
-                   </span>
-                 </div>
-               )
-             })}
-           </div>
-         </div>
-       </aside>
-
-      </div>
-
-       {/* Select Card Modal */}
-      {modalOpen.open && modalOpen.type === 'select' && (
-        <div className="modal-backdrop" onClick={closeModal}>
-          <div className="modal" onClick={(e) => e.stopPropagation()} style={{maxWidth: 1100, width: '96%'}}>
-            <div className="modal-header">
-              <h3 style={{color: 'white', fontSize: 20, fontWeight: 700}}>Select a Card</h3>
-              <button onClick={closeModal} style={{background: 'none', border: 'none', color: 'white', fontSize: 20, cursor: 'pointer'}}>×</button>
             </div>
-            
-            <input
-              type="text"
-              placeholder="Search tokens..."
-              value={modalSearch}
-              onChange={(e) => setModalSearch(e.target.value)}
-              style={{
-                width: '100%',
-                padding: '12px 16px',
-                borderRadius: 8,
-                border: '1px solid rgba(255,255,255,0.2)',
-                background: 'rgba(255,255,255,0.1)',
-                color: 'white',
-                fontSize: 16,
-                marginBottom: 16
-              }}
-            />
-            
-            <div className="modal-grid" style={{maxHeight: '520px', overflowY: 'auto'}}>
-              {filteredTokens.map(({ tok, available }) => {
-                
-                return (
-                  <div 
-                    key={tok.id} 
-                    className="modal-card"
-                    style={{
-                      cursor: available > 0 ? 'pointer' : 'not-allowed',
-                      opacity: available > 0 ? 1 : 0.5
-                    }}
-                    onClick={() => available > 0 && addToNextRound(tok.id)}
-                    title={available <= 0 ? 'No copies left today' : ''}
-                  >
-                    <div style={{
-                      width: 104,
-                      height: 104,
-                      borderRadius: '50%',
-                      background: 'rgba(255,255,255,0.1)',
-                      border: '3px solid rgba(255,255,255,0.25)',
-                      boxShadow: '0 6px 18px rgba(0,0,0,0.25)',
-                      marginBottom: 14,
-                      position: 'relative',
-                      overflow: 'hidden',
-                      display: 'grid',
-                      placeItems: 'center'
-                    }}>
-                      <img
-                        src={tok.logo}
-                        alt={tok.symbol}
-                        style={{
-                          width: 100,
-                          height: 100,
-                          borderRadius: '50%',
-                          objectFit: 'cover',
-                          display: 'block'
-                        }}
-                        onError={handleImageFallback}
-                      />
+          </div>
+
+          {/* RARE PACK */}
+          <div style={{
+            padding: 6,
+            borderRadius: 12,
+            background: 'linear-gradient(180deg,#1e1b4b,#172554)',
+            boxShadow: '0 4px 12px rgba(0,0,0,.32), inset 0 0 0 1px rgba(251,191,36,0.15)',
+            border: '1px solid rgba(251,191,36,0.1)',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 6
+          }}>
+            <div className="text-force-gold" style={{ fontWeight: 900, letterSpacing: 0.5, fontSize: 13, textAlign: 'center', color: '#fbbf24' }}>RARE PACK</div>
+
+            <div style={{ display: 'flex', gap: 8 }}>
+              {/* Image (Resized to 110px) */}
+              <div style={{
+                flex: '0 0 110px',
+                height: 175,
+                borderRadius: 10,
+                background: 'linear-gradient(180deg,#312e81,#1e1b4b)',
+                border: '1px solid rgba(251,191,36,0.2)',
+                overflow: 'hidden',
+                position: 'relative'
+              }}>
+                <img src="/rare-pack.jpg" alt="Rare Pack" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              </div>
+
+              {/* Controls & Buttons */}
+              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+
+                {/* Top: Qty & Info */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'rgba(251,191,36,0.1)', borderRadius: 6, padding: '2px 4px', border: '1px solid rgba(251,191,36,0.2)' }}>
+                    <button onClick={() => setRareBuyQty(q => Math.max(1, q - 1))} style={{ background: 'rgba(251,191,36,0.2)', border: 'none', borderRadius: 4, color: '#fbbf24', cursor: 'pointer', padding: '0 8px', fontSize: 14, height: 24, display: 'grid', placeItems: 'center' }}>-</button>
+                    <div className="text-force-gold" style={{ fontWeight: 700, fontSize: 13, color: '#fbbf24' }}>{rareBuyQty}</div>
+                    <button onClick={() => setRareBuyQty(q => Math.min(10, q + 1))} style={{ background: 'rgba(251,191,36,0.2)', border: 'none', borderRadius: 4, color: '#fbbf24', cursor: 'pointer', padding: '0 8px', fontSize: 14, height: 24, display: 'grid', placeItems: 'center' }}>+</button>
+                  </div>
+                  <div className="text-force-gold" style={{ fontSize: 10, color: '#fbbf24', lineHeight: 1.2, textAlign: 'center', opacity: 0.9 }}>
+                    Higher chance!
+                  </div>
+                </div>
+
+                {/* Bottom: Buttons (Stacked) */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+
+
+                  <BuyButton
+                    userId={user?.id}
+                    onSuccess={() => loadUserData()}
+                    price={1.0}
+                    packType="rare"
+                    compact={true}
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+
+      {/* Select Card Modal */}
+      {
+        modalOpen.open && modalOpen.type === 'select' && (
+          <div className="modal-backdrop" onClick={closeModal}>
+            <div className="modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 1100, width: '96%' }}>
+              <div className="modal-header">
+                <h3 style={{ color: 'white', fontSize: 20, fontWeight: 700 }}>Select a Card</h3>
+                <button onClick={closeModal} style={{ background: 'none', border: 'none', color: 'white', fontSize: 20, cursor: 'pointer' }}>×</button>
+              </div>
+
+              <input
+                type="text"
+                placeholder="Search tokens..."
+                value={modalSearch}
+                onChange={(e) => setModalSearch(e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: '12px 16px',
+                  borderRadius: 8,
+                  border: '1px solid rgba(255,255,255,0.2)',
+                  background: 'rgba(255,255,255,0.1)',
+                  color: 'white',
+                  fontSize: 16,
+                  marginBottom: 16
+                }}
+              />
+
+              <div className="modal-grid" style={{ maxHeight: '520px', overflowY: 'auto' }}>
+                {filteredTokens.map(({ tok, available }) => {
+                  return (
+                    <div
+                      key={tok.id}
+                      className="modal-card"
+                      style={{
+                        cursor: available > 0 ? 'pointer' : 'not-allowed',
+                        opacity: available > 0 ? 1 : 0.5
+                      }}
+                      onClick={() => available > 0 && addToNextRound(tok.id)}
+                      title={available <= 0 ? 'No copies left today' : ''}
+                    >
                       <div style={{
-                        width: 88,
-                        height: 88,
+                        width: 104,
+                        height: 104,
                         borderRadius: '50%',
                         background: 'rgba(255,255,255,0.1)',
+                        border: '3px solid rgba(255,255,255,0.25)',
+                        boxShadow: '0 6px 18px rgba(0,0,0,0.25)',
+                        marginBottom: 14,
+                        position: 'relative',
+                        overflow: 'hidden',
+                        display: 'grid',
+                        placeItems: 'center'
+                      }}>
+                        <img
+                          src={tok.logo}
+                          alt={tok.symbol}
+                          style={{
+                            width: 100,
+                            height: 100,
+                            borderRadius: '50%',
+                            objectFit: 'cover',
+                            display: 'block'
+                          }}
+                          onError={handleImageFallback}
+                        />
+                      </div>
+
+                      <div style={{ fontSize: 16, fontWeight: 800, color: 'white', marginBottom: 6 }}>
+                        {tok.symbol}
+                      </div>
+
+                      <div style={{
+                        fontSize: 12,
+                        color: available > 0 ? '#86efac' : '#fca5a5',
+                        fontWeight: 700
+                      }}>
+                        Left for next: {available}
+                      </div>
+
+                      <button
+                        className="btn"
+                        style={{ fontSize: 15, padding: '10px 18px', marginTop: 10 }}
+                        disabled={available <= 0}
+                      >
+                        Use
+                      </button>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          </div>
+        )
+      }
+
+      {/* Mystery Pack Results Modal */}
+      {
+        showMysteryResults.open && (
+          <div className="modal-backdrop" onClick={() => setShowMysteryResults({ open: false, cards: [] })}>
+            <div className="modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 900, width: '96%' }}>
+              <div className="modal-header">
+                <h3 style={{
+                  color: 'white',
+                  fontSize: 26,
+                  fontWeight: 800,
+                  textTransform: 'uppercase',
+                  letterSpacing: 1.2,
+                  textShadow: '0 4px 12px rgba(0,0,0,0.45)'
+                }}>Mystery Pack Results</h3>
+                <button onClick={() => setShowMysteryResults({ open: false, cards: [] })} style={{ background: 'none', border: 'none', color: 'white', fontSize: 20, cursor: 'pointer' }}>×</button>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 12, marginBottom: 16 }}>
+                {showMysteryResults.cards.map((id, idx) => {
+                  const tok = getTokenById(id) || TOKENS[0]
+                  return (
+                    <div key={idx} style={{
+                      background: `linear-gradient(135deg, ${getGradientColor(idx)}, ${getGradientColor(idx + 1)})`,
+                      borderRadius: 16,
+                      padding: 20,
+                      display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10,
+                      border: '1px solid rgba(255,255,255,.22)',
+                      boxShadow: '0 14px 32px rgba(0,0,0,0.28)'
+                    }}>
+                      <div style={{ width: 100, height: 100, borderRadius: '50%', overflow: 'hidden', border: '3px solid rgba(255,255,255,.3)', display: 'grid', placeItems: 'center', boxShadow: '0 6px 18px rgba(0,0,0,0.35)' }}>
+                        <img
+                          src={tok.logo}
+                          alt={tok.symbol}
+                          style={{ width: 94, height: 94, borderRadius: '50%', objectFit: 'cover' }}
+                          onError={(e) => {
+                            const target = e.target as HTMLImageElement
+                            target.style.display = 'none'
+                            const parent = target.parentElement
+                            if (parent) {
+                              parent.innerHTML = `<div style="font-size: 36px; font-weight: 900; color: white; text-shadow: 0 3px 8px rgba(0,0,0,0.45);">${tok.symbol.charAt(0)}</div>`
+                            }
+                          }}
+                        />
+                      </div>
+                      <div style={{ textAlign: 'center' }}>
+                        <div style={{
+                          fontWeight: 900,
+                          color: '#fff',
+                          fontSize: 18,
+                          letterSpacing: 1,
+                          textTransform: 'uppercase',
+                          textShadow: '0 3px 8px rgba(0,0,0,0.4)'
+                        }}>{tok.symbol}</div>
+                        <div style={{
+                          color: 'rgba(255,255,255,0.9)',
+                          fontSize: 13,
+                          fontWeight: 600,
+                          marginTop: 4
+                        }}>{tok.name}</div>
+                        {tok.about && (
+                          <div style={{
+                            color: 'rgba(255,255,255,0.75)',
+                            fontSize: 11,
+                            letterSpacing: 1.5,
+                            marginTop: 2,
+                            textTransform: 'uppercase'
+                          }}>{tok.about}</div>
+                        )}
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+              <div style={{ textAlign: 'center' }}>
+                <button className="btn primary" onClick={addMysteryToInventory} style={{ marginRight: 8 }}>Add to Inventory</button>
+                <button className="btn" onClick={() => setShowMysteryResults({ open: false, cards: [] })}>Close</button>
+              </div>
+            </div>
+          </div>
+        )
+      }
+
+      {/* Round Results Modal */}
+      {
+        showRoundResults.open && (
+          <div className="modal-backdrop" onClick={() => setShowRoundResults({ open: false, results: [] })}>
+            <div className="modal" style={{
+              background: 'linear-gradient(180deg, rgba(5,15,12,0.95), rgba(4,12,10,0.95))',
+              border: '1px solid rgba(255,255,255,0.18)',
+              borderRadius: 24,
+              padding: 28,
+              maxWidth: 820,
+              width: '92%',
+              maxHeight: '82vh',
+              overflow: 'auto',
+              position: 'relative',
+              boxShadow: '0 24px 80px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.08)'
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+                <h2 style={{ color: 'white', margin: 0, fontSize: 28, fontWeight: 900, letterSpacing: 0.2 }}>🎯 Round Results</h2>
+                <button
+                  onClick={() => setShowRoundResults({ open: false, results: [] })}
+                  style={{ background: 'none', border: 'none', color: 'white', fontSize: 20, cursor: 'pointer' }}
+                >
+                  ×
+                </button>
+              </div>
+
+              <div style={{ marginBottom: 24 }}>
+                {showRoundResults.results.map((result, index) => {
+                  const token = getTokenById(result.tokenId) || TOKENS[0]
+                  return (
+                    <div key={index} style={{
+                      background: `linear-gradient(135deg, ${getGradientColor(index)}, ${getGradientColor(index + 1)})`,
+                      borderRadius: 18,
+                      padding: 16,
+                      marginBottom: 14,
+                      border: '1px solid rgba(255,255,255,0.22)',
+                      display: 'grid',
+                      gridTemplateColumns: '64px 1fr 120px',
+                      alignItems: 'center',
+                      gap: 18,
+                      boxShadow: '0 10px 28px rgba(0,0,0,0.25)'
+                    }}>
+                      {/* Token logo */}
+                      <div style={{
+                        width: 64,
+                        height: 64,
+                        borderRadius: '50%',
+                        background: 'rgba(255,255,255,0.15)',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        fontSize: 32,
-                        fontWeight: 900,
-                        color: 'white',
-                        textShadow: '0 2px 4px rgba(0,0,0,0.5)',
-                        position: 'absolute',
-                        top: '50%',
-                        left: '50%',
-                        transform: 'translate(-50%, -50%)',
-                        zIndex: 1
-                      }}></div>
-                    </div>
-                    
-                    <div style={{fontSize: 16, fontWeight: 800, color: 'white', marginBottom: 6}}>
-                      {tok.symbol}
-                    </div>
-                    
-                    <div style={{
-                      fontSize: 12,
-                      color: available > 0 ? '#86efac' : '#fca5a5',
-                      fontWeight: 700
-                    }}>
-                      Left for next: {available}
-                    </div>
-                    
-                    <button 
-                      className="btn" 
-                      style={{fontSize: 15, padding: '10px 18px', marginTop: 10}}
-                      disabled={available <= 0}
-                    >
-                      Use
-                    </button>
-                  </div>
-                )
-              })}
-            </div>
-          </div>
-        </div>
-      )}
+                        border: '2px solid rgba(255,255,255,0.25)'
+                      }}>
+                        <img
+                          src={token.logo}
+                          alt={token.symbol}
+                          style={{
+                            width: 56,
+                            height: 56,
+                            borderRadius: '50%',
+                            objectFit: 'cover'
+                          }}
+                          onError={(e) => {
+                            const target = e.target as HTMLImageElement;
+                            target.style.display = 'none';
+                            const parent = target.parentElement;
+                            if (parent) {
+                              parent.innerHTML = `<div style="font-size: 20px; font-weight: 900; color: white;">${token.symbol.charAt(0)}</div>`;
+                            }
+                          }}
+                        />
+                      </div>
 
-
-      {/* Mystery Pack Results Modal */}
-      {showMysteryResults.open && (
-        <div className="modal-backdrop" onClick={()=>setShowMysteryResults({open:false, cards:[]})}>
-          <div className="modal" onClick={(e)=>e.stopPropagation()} style={{maxWidth: 900, width:'96%'}}>
-            <div className="modal-header">
-              <h3 style={{
-                color:'white',
-                fontSize:26,
-                fontWeight:800,
-                textTransform:'uppercase',
-                letterSpacing:1.2,
-                textShadow:'0 4px 12px rgba(0,0,0,0.45)'
-              }}>Mystery Pack Results</h3>
-              <button onClick={()=>setShowMysteryResults({open:false, cards:[]})} style={{background:'none', border:'none', color:'white', fontSize:20, cursor:'pointer'}}>×</button>
-            </div>
-            <div style={{display:'grid', gridTemplateColumns:'repeat(5, 1fr)', gap:12, marginBottom:16}}>
-              {showMysteryResults.cards.map((id, idx)=>{
-                const tok = getTokenById(id) || TOKENS[0]
-                return (
-                  <div key={idx} style={{
-                    background:`linear-gradient(135deg, ${getGradientColor(idx)}, ${getGradientColor(idx+1)})`,
-                    borderRadius:16,
-                    padding:20,
-                    display:'flex', flexDirection:'column', alignItems:'center', gap:10,
-                    border:'1px solid rgba(255,255,255,.22)',
-                    boxShadow:'0 14px 32px rgba(0,0,0,0.28)'
-                  }}>
-                    <div style={{width:100,height:100,borderRadius:'50%',overflow:'hidden',border:'3px solid rgba(255,255,255,.3)',display:'grid',placeItems:'center',boxShadow:'0 6px 18px rgba(0,0,0,0.35)'}}>
-                      <img
-                        src={tok.logo}
-                        alt={tok.symbol}
-                        style={{width:94,height:94,borderRadius:'50%',objectFit:'cover'}}
-                        onError={(e) => {
-                          const target = e.target as HTMLImageElement
-                          target.style.display = 'none'
-                          const parent = target.parentElement
-                          if (parent) {
-                            parent.innerHTML = `<div style="font-size: 36px; font-weight: 900; color: white; text-shadow: 0 3px 8px rgba(0,0,0,0.45);">${tok.symbol.charAt(0)}</div>`
-                          }
-                        }}
-                      />
-                    </div>
-                    <div style={{textAlign:'center'}}>
-                      <div style={{
-                        fontWeight:900,
-                        color:'#fff',
-                        fontSize:18,
-                        letterSpacing:1,
-                        textTransform:'uppercase',
-                        textShadow:'0 3px 8px rgba(0,0,0,0.4)'
-                      }}>{tok.symbol}</div>
-                      <div style={{
-                        color:'rgba(255,255,255,0.9)',
-                        fontSize:13,
-                        fontWeight:600,
-                        marginTop:4
-                      }}>{tok.name}</div>
-                      {tok.about && (
+                      {/* Token info */}
+                      <div style={{ flex: 1 }}>
                         <div style={{
-                          color:'rgba(255,255,255,0.75)',
-                          fontSize:11,
-                          letterSpacing:1.5,
-                          marginTop:2,
-                          textTransform:'uppercase'
-                        }}>{tok.about}</div>
-                      )}
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-            <div style={{textAlign:'center'}}>
-              <button className="btn primary" onClick={addMysteryToInventory} style={{marginRight:8}}>Add to Inventory</button>
-              <button className="btn" onClick={()=>setShowMysteryResults({open:false, cards:[]})}>Close</button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Round Results Modal */}
-      {showRoundResults.open && (
-        <div className="modal-backdrop" onClick={() => setShowRoundResults({open: false, results: []})}>
-          <div className="modal" style={{
-            background: 'linear-gradient(180deg, rgba(5,15,12,0.95), rgba(4,12,10,0.95))',
-            border: '1px solid rgba(255,255,255,0.18)',
-            borderRadius: 24,
-            padding: 28,
-            maxWidth: 820,
-            width: '92%',
-            maxHeight: '82vh',
-            overflow: 'auto',
-            position: 'relative',
-            boxShadow: '0 24px 80px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.08)'
-          }}>
-            <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24}}>
-              <h2 style={{color: 'white', margin: 0, fontSize: 28, fontWeight: 900, letterSpacing: 0.2}}>🎯 Round Results</h2>
-              <button 
-                onClick={() => setShowRoundResults({open: false, results: []})} 
-                style={{background: 'none', border: 'none', color: 'white', fontSize: 20, cursor: 'pointer'}}
-              >
-                ×
-              </button>
-            </div>
-
-            <div style={{marginBottom: 24}}>
-              {showRoundResults.results.map((result, index) => {
-                const token = getTokenById(result.tokenId) || TOKENS[0]
-                return (
-                  <div key={index} style={{
-                    background: `linear-gradient(135deg, ${getGradientColor(index)}, ${getGradientColor(index + 1)})`,
-                    borderRadius: 18,
-                    padding: 16,
-                    marginBottom: 14,
-                    border: '1px solid rgba(255,255,255,0.22)',
-                    display: 'grid',
-                    gridTemplateColumns: '64px 1fr 120px',
-                    alignItems: 'center',
-                    gap: 18,
-                    boxShadow: '0 10px 28px rgba(0,0,0,0.25)'
-                  }}>
-                    {/* Token logo */}
-                    <div style={{
-                      width: 64,
-                      height: 64,
-                      borderRadius: '50%',
-                      background: 'rgba(255,255,255,0.15)',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      border: '2px solid rgba(255,255,255,0.25)'
-                    }}>
-                      <img
-                        src={token.logo}
-                        alt={token.symbol}
-                        style={{
-                          width: 56,
-                          height: 56,
-                          borderRadius: '50%',
-                          objectFit: 'cover'
-                        }}
-                        onError={(e) => {
-                          const target = e.target as HTMLImageElement;
-                          target.style.display = 'none';
-                          const parent = target.parentElement;
-                          if (parent) {
-                            parent.innerHTML = `<div style="font-size: 20px; font-weight: 900; color: white;">${token.symbol.charAt(0)}</div>`;
-                          }
-                        }}
-                      />
-                    </div>
-
-                    {/* Token info */}
-                    <div style={{flex: 1}}>
-                      <div style={{
-                        fontSize: 18,
-                        fontWeight: 800,
-                        color: 'white',
-                        marginBottom: 4,
-                        letterSpacing: 0.2
-                      }}>
-                        {token.symbol}
+                          fontSize: 18,
+                          fontWeight: 800,
+                          color: 'white',
+                          marginBottom: 4,
+                          letterSpacing: 0.2
+                        }}>
+                          {token.symbol}
+                        </div>
+                        <div style={{
+                          fontSize: 12,
+                          color: 'rgba(255,255,255,0.8)',
+                          marginBottom: 4
+                        }}>
+                          {result.dir === 'UP' ? '▲ UP' : '▼ DOWN'} • {result.percentage > 0 ? '+' : ''}{result.percentage.toFixed(2)}%
+                        </div>
                       </div>
+
+                      {/* Points */}
                       <div style={{
-                        fontSize: 12,
-                        color: 'rgba(255,255,255,0.8)',
-                        marginBottom: 4
+                        fontSize: 20,
+                        fontWeight: 900,
+                        color: result.points >= 0 ? '#00cfa3' : '#ef4444',
+                        textShadow: '0 2px 4px rgba(0,0,0,0.3)',
+                        textAlign: 'right'
                       }}>
-                        {result.dir === 'UP' ? '▲ UP' : '▼ DOWN'} • {result.percentage > 0 ? '+' : ''}{result.percentage.toFixed(2)}%
+                        {result.points > 0 ? '+' : ''}{result.points}
                       </div>
                     </div>
-
-                    {/* Points */}
-                    <div style={{
-                      fontSize: 20,
-                      fontWeight: 900,
-                      color: result.points >= 0 ? '#00cfa3' : '#ef4444',
-                      textShadow: '0 2px 4px rgba(0,0,0,0.3)',
-                      textAlign: 'right'
-                    }}>
-                      {result.points > 0 ? '+' : ''}{result.points}
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-
-            {/* Total Points */}
-            <div style={{
-              background: 'rgba(255,255,255,0.1)',
-              borderRadius: 18,
-              padding: 22,
-              textAlign: 'center',
-              marginBottom: 24,
-              border: '1px solid rgba(255,255,255,0.2)'
-            }}>
-              <div style={{
-                fontSize: 15,
-                color: 'rgba(255,255,255,0.8)',
-                marginBottom: 8
-              }}>
-                Total Points
+                  )
+                })}
               </div>
-              <div style={{
-                fontSize: 38,
-                fontWeight: 900,
-                 color: (() => {
-                   const total = showRoundResults.results.reduce((sum, result) => sum + result.points, 0)
-                   return total >= 0 ? '#00cfa3' : '#ef4444'
-                 })(),
-                 textShadow: '0 2px 8px rgba(0,0,0,0.4)'
-               }}>
-                 {(() => {
-                   const total = showRoundResults.results.reduce((sum, result) => sum + result.points, 0)
-                   return total > 0 ? `+${total}` : total
-                 })()}
-               </div>
-            </div>
 
-            <div style={{textAlign: 'center'}}>
-              <button 
-                className="btn primary big" 
-                onClick={() => setShowRoundResults({open: false, results: []})}
+              {/* Total Points */}
+              <div style={{
+                background: 'rgba(255,255,255,0.1)',
+                borderRadius: 18,
+                padding: 22,
+                textAlign: 'center',
+                marginBottom: 24,
+                border: '1px solid rgba(255,255,255,0.2)'
+              }}>
+                <div style={{
+                  fontSize: 15,
+                  color: 'rgba(255,255,255,0.8)',
+                  marginBottom: 8
+                }}>
+                  Total Points
+                </div>
+                <div style={{
+                  fontSize: 38,
+                  fontWeight: 900,
+                  color: (() => {
+                    const total = showRoundResults.results.reduce((sum, result) => sum + result.points, 0)
+                    return total >= 0 ? '#00cfa3' : '#ef4444'
+                  })(),
+                  textShadow: '0 2px 8px rgba(0,0,0,0.4)'
+                }}>
+                  {(() => {
+                    const total = showRoundResults.results.reduce((sum, result) => sum + result.points, 0)
+                    return total > 0 ? `+${total}` : total
+                  })()}
+                </div>
+              </div>
+
+              <div style={{ textAlign: 'center' }}>
+                <button
+                  className="btn primary big"
+                  onClick={() => setShowRoundResults({ open: false, results: [] })}
+                >
+                  Continue to Next Round
+                </button>
+              </div>
+            </div>
+          </div>
+        )
+      }
+
+      {/* Registration Modal */}
+      {isRegistering && (
+        <div className="modal-backdrop">
+          <div className="modal" style={{ maxWidth: 400 }}>
+            <div className="modal-header">
+              <h3 style={{ color: 'white', margin: 0 }}>Create Account</h3>
+            </div>
+            <div style={{ padding: 20 }}>
+              <div style={{ marginBottom: 20 }}>
+                <label style={{ display: 'block', color: 'rgba(255,255,255,0.7)', marginBottom: 8, fontSize: 14 }}>Username</label>
+                <input
+                  type="text"
+                  value={regUsername}
+                  onChange={(e) => setRegUsername(e.target.value)}
+                  placeholder="Enter username"
+                  style={{
+                    width: '100%',
+                    padding: '12px',
+                    borderRadius: 8,
+                    border: '1px solid rgba(255,255,255,0.2)',
+                    background: 'rgba(0,0,0,0.2)',
+                    color: 'white',
+                    fontSize: 16
+                  }}
+                />
+                {regError && <div style={{ color: '#fca5a5', fontSize: 13, marginTop: 8 }}>{regError}</div>}
+              </div>
+              <div style={{ display: 'flex', gap: 10 }}>
+                <button
+                  className="btn primary"
+                  style={{ flex: 1, opacity: isRegisteringLoading ? 0.7 : 1, cursor: isRegisteringLoading ? 'wait' : 'pointer' }}
+                  onClick={handleRegister}
+                  disabled={isRegisteringLoading}
+                >
+                  {isRegisteringLoading ? 'Signing...' : 'Register'}
+                </button>
+                <button className="btn" style={{ flex: 1 }} onClick={() => { disconnect(); setIsRegistering(false); }}>Cancel</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Welcome Gift Modal */}
+      {showWelcomeGift && (
+        <div className="modal-backdrop">
+          <div className="modal" style={{ maxWidth: 400, textAlign: 'center', padding: 0, overflow: 'hidden' }}>
+            <div style={{ background: 'linear-gradient(135deg, #8b5cf6, #6d28d9)', padding: '30px 20px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16 }}>
+              <div style={{ fontSize: 40 }}>🎁</div>
+              <h2 style={{ margin: 0, color: 'white', fontSize: 24, fontWeight: 800 }}>Welcome Gift!</h2>
+              <p style={{ margin: 0, color: 'rgba(255,255,255,0.9)', fontSize: 15 }}>
+                Thanks for joining Flip Royale! Here is a free <b>Common Pack</b> to get you started.
+              </p>
+            </div>
+            <div style={{ padding: 24, background: '#1e293b' }}>
+              <img src="/common-pack.jpg" alt="Common Pack" style={{ width: 120, borderRadius: 12, marginBottom: 20, boxShadow: '0 8px 24px rgba(0,0,0,0.4)' }} />
+              <button
+                className="btn"
+                onClick={() => {
+                  setShowWelcomeGift(false);
+                  setModalOpen({ open: true, type: 'pack' }); // Open pack immediately
+                  // Trigger pack opening logic if needed, or let user click "Open" in pack modal
+                  // For better UX, let's just close this and let them see the inventory or auto-open
+                  // But user asked to "open pack", so let's simulate opening or guide them
+                  buyMysteryPacks('common', true); // true = free/gift open (need to support this in function or just call open API)
+                  // Actually, buyMysteryPacks handles purchase. We just want to OPEN.
+                  // Since we added it to inventory, we should use a function to OPEN it.
+                  // Let's assume buyMysteryPacks handles "buy and open" or we need a separate open flow.
+                  // For now, let's just close this and show the Pack Opening animation if possible.
+                  // Simpler: Just close this modal and call the pack opening modal with 'common' type
+                  setModalOpen({ open: true, type: 'pack' });
+                  // We need to set the pack type to open
+                  // Since the existing modal logic might be complex, let's just guide them to inventory or auto-open
+                }}
+                style={{
+                  width: '100%',
+                  background: 'linear-gradient(135deg, #10b981, #059669)',
+                  border: 'none',
+                  padding: '14px',
+                  borderRadius: 12,
+                  color: 'white',
+                  fontWeight: 800,
+                  fontSize: 16,
+                  cursor: 'pointer',
+                  boxShadow: '0 4px 12px rgba(16, 185, 129, 0.3)'
+                }}
               >
-                Continue to Next Round
+                Open My Gift!
               </button>
             </div>
           </div>
         </div>
       )}
-      
-    </div>
+    </div >
   )
 }

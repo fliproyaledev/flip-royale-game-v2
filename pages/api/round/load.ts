@@ -50,7 +50,7 @@ export default async function handler(
     return res.status(200).json({
       ok: true,
       activeRound: user.activeRound,
-      nextRound: user.nextRound,
+      nextRound: user.nextRound || Array(5).fill(null),
       currentRound: user.currentRound,
       lastSettledDay: lastSettled,
     })
