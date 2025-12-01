@@ -2829,7 +2829,12 @@ async function saveNextRoundPicks(e?: any) {
                 }}
               >
                 Open My Gift!
-{/* 📦 PAKET SATIN ALINDI MODALI */}
+            
+            </div>
+          </div>
+        </div>
+      )}
+          {/* 📦 PAKET SATIN ALINDI MODALI */}
       {purchasedPack && (
         <div className="modal-backdrop" style={{ zIndex: 9999 }}>
           <div className="modal" style={{ 
@@ -2925,11 +2930,7 @@ async function saveNextRoundPicks(e?: any) {
             </div>
           </div>
         </div>
-      )}             
-            </div>
-          </div>
-        </div>
-      )}
+      )} 
     </div>
   )
 }
