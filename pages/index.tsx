@@ -2241,6 +2241,9 @@ export default function Home() {
                       </div>
                     </>
                   )}
+                </div>
+              </>
+            )}
             {/* --- FİNALIZING KONTROLÜ BİTİŞİ (NEXT ROUND) --- */}
           </div>
 
