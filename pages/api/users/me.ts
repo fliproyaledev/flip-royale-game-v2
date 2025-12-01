@@ -1,9 +1,8 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-// 👇 ÖNEMLİ: Oracle Köprüsünü kullanıyoruz
+// DİKKAT: Eski loadUsers fonksiyonunu DEĞİL, yeni getUser fonksiyonunu kullanıyoruz
 import { getUser } from '../../../lib/users'; 
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  // Frontend genellikle ?userId=... parametresiyle çağırır
   const { userId } = req.query;
 
   if (!userId || typeof userId !== 'string') {
@@ -11,21 +10,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    const cleanId = userId.toLowerCase();
-
-    // 🔍 Oracle'dan Kullanıcı Verisini Çek
-    const user = await getUser(cleanId);
+    // Oracle'dan veriyi çek
+    const user = await getUser(userId.toLowerCase());
 
     if (user) {
-      // Kullanıcı bulundu, veriyi döndür
       return res.status(200).json({ ok: true, user });
     } else {
-      // Kullanıcı Oracle'da yoksa
+      // Eğer Oracle'da bile yoksa 404 dön
       return res.status(404).json({ ok: false, error: 'User not found in Oracle' });
     }
 
   } catch (error: any) {
-    console.error('API Error (me.ts):', error);
     return res.status(500).json({ ok: false, error: 'Internal Server Error' });
   }
 }
