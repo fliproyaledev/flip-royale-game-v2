@@ -1,52 +1,54 @@
-import type { NextApiRequest, NextApiResponse } from 'next';
-import { loadUsers, saveUsers, getOrCreateUser } from '../../../lib/users';
+import type { NextApiRequest, NextApiResponse } from 'next'
+import { updateUser } from '../../../lib/users' // Oracle Köprüsü
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+  // Sadece POST
+  if (req.method !== 'POST') {
+    return res.status(405).json({ ok: false, error: 'Method not allowed' })
+  }
+
+  const { address, username } = req.body
+
+  if (!address || !username) {
+    return res.status(400).json({ ok: false, error: 'Missing address or username' })
+  }
+
   try {
-    if (req.method !== 'POST') return res.status(405).end();
+    const normalizedAddress = address.toLowerCase();
+    const now = new Date().toISOString();
 
-    const { address, username } = req.body;
-    console.log('[REGISTER] Request received:', { address, username });
+    console.log(`📝 [Register] Yeni kullanıcı oluşturuluyor: ${normalizedAddress} (${username})`);
 
-    if (!address) {
-      console.error('[REGISTER] Missing address');
-      return res.status(400).json({ ok: false, error: 'Missing address' });
-    }
+    // 1. Yeni Kullanıcı Profili
+    const newUserProfile = {
+      id: normalizedAddress,
+      username: username, 
+      name: username,
+      totalPoints: 0,
+      bankPoints: 0,
+      giftPoints: 0,
+      createdAt: now,
+      updatedAt: now,
+      
+      // HEDİYE PAKETİ: Envantere 1 adet common pack ekle
+      inventory: { common: 1 }, 
+      
+      logs: [{
+        type: 'system',
+        date: now.slice(0, 10),
+        note: 'user-registered-oracle'
+      }]
+    };
 
-    // Cüzdan adresini küçük harfe çevir (ID olarak bu kullanılacak)
-    const cleanAddress = String(address).toLowerCase();
+    // 2. Oracle'a Zorla Kaydet (Update User fonksiyonu yoksa oluşturur)
+    await updateUser(normalizedAddress, newUserProfile);
 
-    const users = await loadUsers();
+    console.log(`✅ [Register] Kullanıcı Oracle'a başarıyla kaydedildi: ${normalizedAddress}`);
 
-    // Eğer zaten varsa hata ver (Güvenlik)
-    if (users[cleanAddress]) {
-      console.warn('[REGISTER] User already exists:', cleanAddress);
-      return res.status(400).json({ ok: false, error: 'User already exists' });
-    }
+    return res.status(200).json({ ok: true, user: newUserProfile, isNewUser: true });
 
-    // Yeni kullanıcı oluştur
-    // ID = Cüzdan Adresi
-    const newUser = getOrCreateUser(users, cleanAddress);
-
-    // Ekstra bilgileri işle
-    newUser.name = username; // Seçtiği isim
-    newUser.walletAddress = cleanAddress; // Cüzdan adresi
-
-    // Listeye ekle ve kaydet
-    users[cleanAddress] = newUser;
-
-    // WELCOME GIFT: Add 1 Common Pack
-    if (!users[cleanAddress].inventory) {
-      users[cleanAddress].inventory = {};
-    }
-    users[cleanAddress].inventory['common'] = (users[cleanAddress].inventory['common'] || 0) + 1;
-
-    await saveUsers(users);
-    console.log('[REGISTER] Success:', cleanAddress);
-
-    return res.status(200).json({ ok: true, user: newUser, isNewUser: true });
   } catch (error: any) {
-    console.error('[REGISTER] Error:', error);
-    return res.status(500).json({ ok: false, error: error.message || 'Internal Server Error' });
+    console.error('❌ [Register] Hata:', error);
+    return res.status(500).json({ ok: false, error: error.message || 'Registration failed' });
   }
 }
