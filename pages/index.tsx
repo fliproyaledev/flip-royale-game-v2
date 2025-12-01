@@ -119,6 +119,7 @@ export default function Home() {
   const [regUsername, setRegUsername] = useState('')
   const [regError, setRegError] = useState('')
   const [showWelcomeGift, setShowWelcomeGift] = useState(false) // Welcome Gift Modal State
+  const [purchasedPack, setPurchasedPack] = useState<{ type: string, count: number } | null>(null)
 
   // --- ZAMAN VE FINALIZING KONTROLÜ ---
   const [now, setNow] = useState(Date.now())
@@ -2345,11 +2346,14 @@ async function saveNextRoundPicks(e?: any) {
 
 
                   <BuyButton
-                    userId={user?.id}
-                    onSuccess={() => loadUserData()}
-                    price={0.1}
-                    packType="common"
-                    compact={true}
+  userId={user?.id}
+  onSuccess={() => {
+    loadUserData(); // Puanı güncelle
+    setPurchasedPack({ type: 'common', count: buyQty }); // ✨ MODALI AÇ
+  }}
+  price={0.1 * buyQty} // Fiyatı adetle çarpıyoruz
+  packType="common"
+  compact={true}
                   />
                 </div>
               </div>
@@ -2403,11 +2407,14 @@ async function saveNextRoundPicks(e?: any) {
 
 
                   <BuyButton
-                    userId={user?.id}
-                    onSuccess={() => loadUserData()}
-                    price={1.0}
-                    packType="rare"
-                    compact={true}
+  userId={user?.id}
+  onSuccess={() => {
+    loadUserData(); 
+    setPurchasedPack({ type: 'rare', count: rareBuyQty }); // ✨ MODALI AÇ
+  }}
+  price={1.0 * rareBuyQty}
+  packType="rare"
+  compact={true}
                   />
                 </div>
               </div>
@@ -2823,6 +2830,108 @@ async function saveNextRoundPicks(e?: any) {
               >
                 Open My Gift!
               </button>
+              {/* 📦 SATIN ALMA SONRASI AÇMA MODALI */}
+      {purchasedPack && (
+        <div className="modal-backdrop" style={{ zIndex: 9999 }}>
+          <div className="modal" style={{ 
+            textAlign: 'center', 
+            maxWidth: 400, 
+            background: 'linear-gradient(180deg, #0f172a 0%, #1e293b 100%)',
+            border: '1px solid rgba(255,255,255,0.1)',
+            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)'
+          }}>
+            <div style={{ fontSize: 48, marginBottom: 16 }}>📦</div>
+            
+            <h3 style={{ color: 'white', fontSize: 24, fontWeight: 800, margin: '0 0 8px 0' }}>
+              Pack Purchased!
+            </h3>
+            
+            <p style={{ color: '#94a3b8', fontSize: 15, margin: '0 0 24px 0' }}>
+              You have successfully added <b>{purchasedPack.count} {purchasedPack.type.toUpperCase()}</b> Pack(s) to your inventory.
+            </p>
+
+            {/* Paket Resmi */}
+            <div style={{ 
+              width: 140, 
+              height: 200, 
+              margin: '0 auto 24px', 
+              borderRadius: 12, 
+              overflow: 'hidden',
+              boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.3), 0 0 0 2px rgba(255,255,255,0.1)'
+            }}>
+              <img 
+                src={`/${purchasedPack.type === 'rare' ? 'rare-pack.jpg' : 'common-pack.jpg'}`} 
+                alt="Pack" 
+                style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
+              />
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <button 
+                className="btn"
+                style={{
+                  background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                  padding: '16px',
+                  fontSize: 18,
+                  fontWeight: 800,
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: 12,
+                  cursor: 'pointer',
+                  boxShadow: '0 4px 6px -1px rgba(16, 185, 129, 0.3)'
+                }}
+                onClick={async () => {
+                   // 1. Modal'ı kapat (State'i temizle)
+                   setPurchasedPack(null);
+                   
+                   // 2. Paket Açma İsteği At
+                   try {
+                     const res = await fetch('/api/users/openPack', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({ userId: user.id, packType: purchasedPack.type })
+                     });
+                     
+                     const data = await res.json();
+                     
+                     if(data.ok) {
+                        // 3. Sonuçları Göster (Mevcut Mystery Modalını Kullanıyoruz)
+                        setShowMysteryResults({ open: true, cards: data.newCards });
+                        loadUserData(); // Envanteri güncelle
+                     } else {
+                        alert("Error opening pack: " + data.error);
+                     }
+                   } catch (e) {
+                     alert("Connection error while opening pack.");
+                   }
+                }}
+              >
+                OPEN NOW!
+              </button>
+              
+              <button 
+                className="btn" 
+                style={{
+                  background: 'transparent',
+                  color: '#94a3b8',
+                  padding: '12px',
+                  fontSize: 14,
+                  fontWeight: 600,
+                  border: '1px solid rgba(255,255,255,0.1)',
+                  borderRadius: 12,
+                  cursor: 'pointer'
+                }}
+                onClick={() => {
+                  setPurchasedPack(null);
+                  loadUserData(); // Envanteri güncelle ki paket orada gözüksün
+                }}
+              >
+                Open Later (Save to Inventory)
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
             </div>
           </div>
         </div>
