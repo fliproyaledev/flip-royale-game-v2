@@ -19,6 +19,7 @@ export default function BuyButton({
   const [isProcessing, setIsProcessing] = useState(false);
 
   // 1. İŞLEM HAZIRLIĞI (Prepare)
+  // Cüzdan açılmadan önce işlemi hazırlar
   const { config, error: prepareError } = usePrepareContractWrite({
     address: VIRTUAL_TOKEN_ADDRESS as `0x${string}`,
     abi: ERC20_ABI,
@@ -31,25 +32,27 @@ export default function BuyButton({
   });
 
   // 2. YAZMA İŞLEMİ (Write)
+  // Kullanıcı butona basınca cüzdanı tetikler
   const { data: txData, write, isLoading: isWriting } = useContractWrite(config);
 
   // 3. ONAY BEKLEME (Wait)
-  // DÜZELTME: useEffect yerine buradaki onSuccess kullanıldı.
-  // Bu sadece işlem blockchain'de onaylandığında 1 KERE çalışır.
+  // Blockchain onayı gelince Backend'i tetikler
   const { isLoading: isConfirming } = useWaitForTransaction({
     hash: txData?.hash,
     onSuccess: (receipt) => {
-        console.log("Blockchain işlemi başarılı, Backend doğrulaması başlıyor...", receipt.transactionHash);
+        console.log("Blockchain onayı alındı, Backend doğrulaması başlıyor...", receipt.transactionHash);
+        // Sonsuz döngü olmaması için useEffect yerine burayı kullanıyoruz
         handleBackendVerification(receipt.transactionHash);
     },
     onError: (err) => {
-        console.error("Blockchain onayı alınamadı:", err);
+        console.error("Blockchain hatası:", err);
         alert("Transaction failed on blockchain.");
     }
   });
 
+  // 4. BACKEND DOĞRULAMASI
   async function handleBackendVerification(txHash: string) {
-    if(isProcessing) return; // Çifte tıklamayı önle
+    if(isProcessing) return; // Çifte işlem koruması
     setIsProcessing(true);
 
     try {
@@ -70,21 +73,27 @@ export default function BuyButton({
       try {
         data = await res.json();
       } catch (e) {
-        throw new Error("Sunucudan geçersiz yanıt geldi.");
+        console.error("JSON Parse Hatası:", e);
       }
 
-      if (res.ok && data.ok) {
-        alert("Purchase Successful! Pack added to inventory.");
-        if (onSuccess) onSuccess();
+      if (res.ok && data?.ok) {
+        console.log("Satın alma başarılı!");
+        // 🚨 KRİTİK DEĞİŞİKLİK:
+        // Alert mesajını KALDIRDIK. Direkt onSuccess() çağırıyoruz.
+        // Bu sayede index.tsx'teki Paket Açma Modalı anında belirecek.
+        if (onSuccess) onSuccess(); 
       } else {
-        console.error("API Hatası:", data);
-        // Hata olsa bile kartlar eklenmiş olabilir, kullanıcıyı korkutma
-        alert("Purchase processed! Check your inventory.");
+        console.warn("API Uyarısı:", data?.error);
+        // Hata olsa bile para gittiyse akışı bozmamak için devam ettirebiliriz
+        // veya sessizce loglayabiliriz.
+        if (onSuccess) onSuccess();
       }
+
     } catch (e) {
-      console.error("Verification Error:", e);
-      // Kritik Hata: Para gitti ama doğrulama yapılamadı
-      alert("Transaction successful on blockchain. Please refresh the page to see your pack.");
+      console.error("Doğrulama Hatası:", e);
+      // Ağ hatası olsa bile kullanıcıyı mağdur etmemek için başarı varsayabiliriz
+      // veya kullanıcıya manuel kontrol etmesini söyleyebiliriz.
+      alert("Transaction sent. Please check your inventory in a moment.");
     } finally {
       setIsProcessing(false);
     }
@@ -97,7 +106,6 @@ export default function BuyButton({
     
     if (prepareError) {
       console.error("Prepare Error:", prepareError);
-      // Hata detayını kullanıcıya göster
       const msg = prepareError.message.includes("insufficient funds") 
         ? "Insufficient VIRTUAL balance + ETH for gas." 
         : "Transaction preparation failed. Check console.";
@@ -107,7 +115,7 @@ export default function BuyButton({
     if (write) {
       write();
     } else {
-      alert("Wallet not ready. Please try again.");
+      alert("Wallet not ready. Please refresh and try again.");
     }
   };
 
@@ -125,7 +133,7 @@ export default function BuyButton({
         padding: compact ? '8px 2px' : '8px 0',
         fontWeight: 800,
         whiteSpace: 'nowrap',
-        // Buton rengini paket tipine göre ayarla
+        // Buton rengini paket tipine göre ayarla (Gold/Blue)
         background: packType === 'rare' 
           ? 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)' 
           : 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)'
