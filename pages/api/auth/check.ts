@@ -1,6 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-// 👇 DÜZELTME: Yanlış olan '../lib/users' yerine '@/' kullanıyoruz
-import { loadUsers } from '../../../lib/users';
+// 👇 DÜZELTME: loadUsers yerine getUser (Oracle Köprüsü) kullanıyoruz
+import { getUser } from '../../../lib/users';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const { address } = req.query;
@@ -10,10 +10,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const cleanAddress = String(address).toLowerCase();
 
   try {
-    const users = await loadUsers();
-    
-    // Kullanıcıyı ID'sinden (Cüzdan Adresinden) bul
-    const user = users[cleanAddress];
+    // 🔍 Oracle'a Sor: Bu kullanıcı veritabanında var mı?
+    // (Eski sistemde tüm users'ı yüklüyorduk, şimdi sadece ilgili kişiyi soruyoruz)
+    const user = await getUser(cleanAddress);
 
     if (user) {
       return res.status(200).json({ exists: true, user });
