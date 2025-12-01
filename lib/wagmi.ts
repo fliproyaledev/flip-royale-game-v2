@@ -23,7 +23,7 @@ export const base = {
 } as const;
 
 // Proje ID'si
-const projectId = process.env.NEXT_PUBLIC_WALLET_PROJECT_ID || 'flip-royale-public-id';
+const projectId = process.env.NEXT_PUBLIC_WALLET_PROJECT_ID || '64eacce4072beecbb82a5c6f1c612552';
 
 // 1. Zincirleri yapılandır
 const { chains, publicClient } = configureChains(
