@@ -126,19 +126,17 @@ export async function updateUser(address: string, updates: any) {
 // ─────────────────────────────────────────────────────────────
 
 // ⚠️ UYARI: Bu fonksiyon eski 'loadUsers' yerine geçer ama artık boş döner.
-// Duels gibi eski sistemler bunu kullanıyorsa güncellenmeleri gerekir ama build hatası vermez.
 export async function loadUsers(): Promise<Record<string, UserRecord>> {
   console.warn("⚠️ loadUsers() called in Oracle mode. This function is deprecated.");
-  return {}; // Build hatasını önlemek için boş obje dönüyoruz
+  return {}; 
 }
 
 export async function saveUsers(map: Record<string, UserRecord>): Promise<void> {
   console.warn("⚠️ saveUsers() called in Oracle mode. Use updateUser() instead.");
 }
 
-// Helper: Kullanıcı nesnesi oluşturma mantığı (Hala kullanılabilir)
+// Helper: Kullanıcı nesnesi oluşturma mantığı
 export function getOrCreateUser(map: Record<string, UserRecord>, userId: string): UserRecord {
-  // Map boş gelse bile tekil işlem için mantığı koruyoruz
   if (!userId) throw new Error("Invalid User ID");
   
   let user = map[userId];
@@ -158,21 +156,39 @@ export function getOrCreateUser(map: Record<string, UserRecord>, userId: string)
       inventory: { common: 1 },
       roundHistory: []
     } as UserRecord;
-    // Map'e eklesek de bu sadece local memory'de kalır, Oracle'a gitmez.
-    // Ancak fonksiyonun imzası bozulmasın diye bırakıyoruz.
     map[userId] = user;
   }
   return user;
 }
 
-// Logic Helper: Puan ekleme (Hala kullanılabilir)
+// ─────────────────────────────────────────────────────────────
+// MISSING HELPERS (Duels.ts için gerekli olanlar)
+// ─────────────────────────────────────────────────────────────
+
 export function creditBank(user: UserRecord, amount: number, note?: string, dateIso?: string) {
   if (!Number.isFinite(amount)) return;
   user.bankPoints += amount;
   user.updatedAt = new Date().toISOString();
 }
 
-// Logic Helper: Günlük puan (Hala kullanılabilir)
+export function creditGamePoints(user: UserRecord, amount: number, note?: string, dateIso?: string) {
+  if (!Number.isFinite(amount)) return;
+  if (amount > 0) user.totalPoints += amount;
+  user.bankPoints += amount;
+  user.updatedAt = new Date().toISOString();
+}
+
+export function debitBank(user: UserRecord, amount: number, note?: string, dateIso?: string) {
+  if (!Number.isFinite(amount)) return;
+  let useGift = Math.min(amount, user.giftPoints);
+  user.giftPoints -= useGift;
+  amount -= useGift;
+  if (amount > 0) {
+    user.bankPoints = Math.max(0, user.bankPoints - amount);
+  }
+  user.updatedAt = new Date().toISOString();
+}
+
 export function applyDailyDelta(user: UserRecord, dateIso: string, delta: number, note?: string) {
   if (delta > 0) {
     user.totalPoints += delta;
