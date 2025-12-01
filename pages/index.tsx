@@ -1221,7 +1221,7 @@ export default function Home() {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            userId: user.id,
+            userId: user.id.toLowerCase(),
             nextRound: dataToSave,
             signature: signature, // <--- İMZAYI EKLİYORUZ
             message: messageToSign            
@@ -1387,7 +1387,7 @@ export default function Home() {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              userId: user.id,
+              userId: user.id.toLowerCase(),
               activeRound: newActive,
               signature: signature,
               message: messageToSign              
