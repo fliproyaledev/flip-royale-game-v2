@@ -1423,7 +1423,7 @@ export default function Home() {
           <a className="tab" href="/inventory">INVENTORY</a>
           <a className="tab" href="/leaderboard">LEADERBOARD</a>
           <a className="tab" href="/history">HISTORY</a>
-          {user && <a className="tab" href="/profile">PROFILE</a>}
+          <a className="tab" href="/profile">PROFILE</a>
         </nav>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginLeft: 'auto' }}>
           <ThemeToggle />
