@@ -2218,18 +2218,22 @@ export default function Home() {
                         <span>✏️</span><span>Change</span>
                       </button>
                     </div>
-                  ) : (
+) : (
                     <>
-                      type="button"  // <--- İŞTE BU ÇOK KRİTİK!
-    onClick={(e) => saveNextRoundPicks(e)} className="btn" style={{
-                        background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-                        border: '2px solid rgba(16, 185, 129, 0.5)',
-                        color: 'white', fontSize: 16, fontWeight: 700,
-                        padding: '14px 32px', borderRadius: 12, cursor: 'pointer',
-                        boxShadow: '0 4px 14px rgba(16, 185, 129, 0.4), 0 2px 8px rgba(0, 0, 0, 0.2)',
-                        transition: 'all 0.3s ease', textTransform: 'uppercase', letterSpacing: 1.2,
-                        display: 'flex', alignItems: 'center', gap: 8
-                      }}>
+                      <button 
+                        type="button" 
+                        onClick={(e) => saveNextRoundPicks(e)} 
+                        className="btn" 
+                        style={{
+                          background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                          border: '2px solid rgba(16, 185, 129, 0.5)',
+                          color: 'white', fontSize: 16, fontWeight: 700,
+                          padding: '14px 32px', borderRadius: 12, cursor: 'pointer',
+                          boxShadow: '0 4px 14px rgba(16, 185, 129, 0.4), 0 2px 8px rgba(0, 0, 0, 0.2)',
+                          transition: 'all 0.3s ease', textTransform: 'uppercase', letterSpacing: 1.2,
+                          display: 'flex', alignItems: 'center', gap: 8
+                        }}
+                      >
                         <span>💾</span><span>Save Picks</span>
                       </button>
                       <div style={{ fontSize: 12, color: 'rgba(255, 255, 255, 0.7)', fontStyle: 'italic' }}>
@@ -2237,9 +2241,6 @@ export default function Home() {
                       </div>
                     </>
                   )}
-                </div>
-              </>
-            )}
             {/* --- FİNALIZING KONTROLÜ BİTİŞİ (NEXT ROUND) --- */}
           </div>
 
