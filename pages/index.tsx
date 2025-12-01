@@ -1183,7 +1183,7 @@ export default function Home() {
     setNextRoundSaved(false) // Mark as unsaved when modified
   }
 
- async function saveNextRoundPicks() {
+async function saveNextRoundPicks(e?: any) {
     // 1. Kullanıcı Kontrolü
     if (!user?.id) {
         alert("Please login first.");
