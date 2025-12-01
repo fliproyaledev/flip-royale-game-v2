@@ -691,7 +691,7 @@ export default function Home() {
     }
 
     // 2) Sunucuya (Redis’e) yaz
-    ; (async () => {
+   /* ; (async () => {
       try {
         const res = await fetch('/api/round/save', {
           method: 'POST',
@@ -719,7 +719,7 @@ export default function Home() {
       } catch (err) {
         console.error('⚠️ [AUTO] Network error while syncing round to server:', err)
       }
-    })()
+    })() */
   }, [nextRound, stateLoaded, nextRoundLoaded, user?.id, active, currentRound])
 
 
@@ -1224,6 +1224,7 @@ export default function Home() {
             userId: user.id,
             nextRound: dataToSave,
             signature: signature // <--- İMZAYI EKLİYORUZ
+            message: messageToSign            
           })
         }).then(r => r.json()).then(d => {
           if (d.ok) {
@@ -1389,6 +1390,7 @@ export default function Home() {
               userId: user.id,
               activeRound: newActive,
               signature: signature
+              message: messageToSign              
             })
           })
         }
