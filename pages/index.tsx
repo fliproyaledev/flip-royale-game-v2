@@ -1183,31 +1183,41 @@ export default function Home() {
     setNextRoundSaved(false) // Mark as unsaved when modified
   }
 
-  async function saveNextRoundPicks() {
-    if (!user?.id) return
+ async function saveNextRoundPicks() {
+    // 1. Kullanıcı Kontrolü
+    if (!user?.id) {
+        alert("Please login first.");
+        return;
+    }
+
+    // 2. Kart Seçimi Kontrolü
+    if (!Array.isArray(nextRound) || nextRound.length !== 5) {
+        alert('Invalid picks data.');
+        return;
+    }
+    const filledCount = nextRound.filter(p => p !== null).length;
+    if (filledCount === 0) {
+        alert('Please select at least one card.');
+        return;
+    }
 
     try {
-      // 1. Önce İmza Al (Kullanıcı reddederse burası hata fırlatır ve işlem durur)
+      // 3. İmzalanacak Mesajı Hazırla
       const selectedTickers = nextRound.filter(p => p).map(p => p?.tokenId).join(', ');
-      const messageToSign = `Flip Royale: Save Picks\nDate: ${new Date().toISOString().split('T')[0]}\nItems: ${nextRound.filter(p => p).length}\nCards: ${selectedTickers}`;
+      // Mesaj formatı Backend ile birebir aynı olmalı ('Flip Royale:' ile başlamalı)
+      const messageToSign = `Flip Royale: Save Picks\nDate: ${new Date().toISOString().split('T')[0]}\nItems: ${filledCount}\nCards: ${selectedTickers}`;
+      
+      console.log("✍️ İmza İsteniyor...");
+      
+      // 4. Cüzdandan İmza Al
       const signature = await signMessageAsync({
-        message: messageToSign, // Daha güzel mesaj
+        message: messageToSign,
       });
 
-      // 2. İmzayı API'ye gönder
-      setNextRound(currentNextRound => {
-        // ... (Validasyon kodları aynı kalsın) ...
-        if (!Array.isArray(currentNextRound) || currentNextRound.length !== 5) {
-          alert('Invalid picks data.')
-          return currentNextRound
-        }
-        const filledCount = currentNextRound.filter(p => p !== null).length
-        if (filledCount === 0) {
-          alert('Please select at least one card.')
-          return currentNextRound
-        }
+      console.log("✅ İmza Alındı, Sunucuya Gönderiliyor...");
 
-        const dataToSave = currentNextRound.map(p => {
+      // 5. Veriyi Hazırla (Gereksiz null'ları temizlemiyoruz, sunucu yapısını koruyoruz)
+      const dataToSave = nextRound.map(p => {
           if (p === null) return null
           return {
             tokenId: p.tokenId,
@@ -1215,33 +1225,38 @@ export default function Home() {
             duplicateIndex: p.duplicateIndex,
             locked: p.locked || false
           }
-        })
+      });
 
-        fetch('/api/round/save', {
-          method: 'POST',
+      // 6. API İsteği (POST)
+      // DİKKAT: method: 'POST' fetch parantezinin İÇİNDE olmalı
+      const response = await fetch('/api/round/save', {
+          method: 'POST',  // <--- İŞTE BURASI ÇOK ÖNEMLİ
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            userId: user.id.toLowerCase(),
+            userId: user.id.toLowerCase(), // <--- Harf hatası önlemi (User not found için)
             nextRound: dataToSave,
-            signature: signature, // <--- İMZAYI EKLİYORUZ
-            message: messageToSign            
+            signature: signature,
+            message: messageToSign // <--- Mesajı da gönderiyoruz
           })
-        }).then(r => r.json()).then(d => {
-          if (d.ok) {
-            setNextRoundLoaded(true)
-            setNextRoundSaved(true)
-            alert(`Picks saved successfully!`)
-          } else {
-            alert('Failed to save: ' + (d.error || 'Unknown error'))
-          }
-        })
+      });
 
-        return currentNextRound
-      })
+      const data = await response.json();
+
+      // 7. Sonuç İşleme
+      if (response.ok && data.ok) {
+          console.log("🎉 Kayıt Başarılı!");
+          setNextRoundLoaded(true);
+          setNextRoundSaved(true);
+          alert(`Picks saved successfully!`);
+      } else {
+          console.error("Sunucu Hatası:", data);
+          alert('Failed to save: ' + (data.error || 'Unknown error'));
+      }
+
     } catch (e) {
-      console.error(e);
-      // Kullanıcı imzayı reddederse buraya düşer
-      // alert('Signature rejected. Changes not saved.') 
+      console.error("Save Error:", e);
+      // Kullanıcı imzayı reddederse veya ağ hatası olursa
+      // alert('Save cancelled or failed.'); 
     }
   }
 
