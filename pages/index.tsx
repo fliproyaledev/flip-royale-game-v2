@@ -2829,8 +2829,7 @@ async function saveNextRoundPicks(e?: any) {
                 }}
               >
                 Open My Gift!
-              </button>
-              {/* 📦 SATIN ALMA SONRASI AÇMA MODALI */}
+{/* 📦 PAKET SATIN ALINDI MODALI */}
       {purchasedPack && (
         <div className="modal-backdrop" style={{ zIndex: 9999 }}>
           <div className="modal" style={{ 
@@ -2850,7 +2849,6 @@ async function saveNextRoundPicks(e?: any) {
               You have successfully added <b>{purchasedPack.count} {purchasedPack.type.toUpperCase()}</b> Pack(s) to your inventory.
             </p>
 
-            {/* Paket Resmi */}
             <div style={{ 
               width: 140, 
               height: 200, 
@@ -2881,10 +2879,7 @@ async function saveNextRoundPicks(e?: any) {
                   boxShadow: '0 4px 6px -1px rgba(16, 185, 129, 0.3)'
                 }}
                 onClick={async () => {
-                   // 1. Modal'ı kapat (State'i temizle)
                    setPurchasedPack(null);
-                   
-                   // 2. Paket Açma İsteği At
                    try {
                      const res = await fetch('/api/users/openPack', {
                         method: 'POST',
@@ -2895,9 +2890,8 @@ async function saveNextRoundPicks(e?: any) {
                      const data = await res.json();
                      
                      if(data.ok) {
-                        // 3. Sonuçları Göster (Mevcut Mystery Modalını Kullanıyoruz)
                         setShowMysteryResults({ open: true, cards: data.newCards });
-                        loadUserData(); // Envanteri güncelle
+                        loadUserData(); 
                      } else {
                         alert("Error opening pack: " + data.error);
                      }
@@ -2923,7 +2917,7 @@ async function saveNextRoundPicks(e?: any) {
                 }}
                 onClick={() => {
                   setPurchasedPack(null);
-                  loadUserData(); // Envanteri güncelle ki paket orada gözüksün
+                  loadUserData(); 
                 }}
               >
                 Open Later (Save to Inventory)
@@ -2931,7 +2925,7 @@ async function saveNextRoundPicks(e?: any) {
             </div>
           </div>
         </div>
-      )}
+      )}             
             </div>
           </div>
         </div>
