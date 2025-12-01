@@ -1,31 +1,47 @@
-import type { NextApiRequest, NextApiResponse } from 'next'
-import { getPriceForToken } from '../../lib/price'
+import type { NextApiRequest, NextApiResponse } from 'next';
 
-export default async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse
-) {
-  if (req.method !== 'GET') {
-    return res.status(405).json({ ok: false, error: 'Method Not Allowed' })
+const ORACLE_URL = process.env.ORACLE_URL;
+
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+  const { token } = req.query;
+
+  if (!ORACLE_URL) {
+    // Oracle ayarlı değilse boş dön
+    return res.status(200).json({ p0: 0, pLive: 0, pClose: 0, source: 'fallback' });
   }
-
-  const tokenParam = req.query.token
-  
-  if (!tokenParam || typeof tokenParam !== 'string') {
-    return res.status(400).json({ error: 'Missing token id' })
-  }
-
-  // ID temizliği ($ işareti varsa kaldır)
-  const cleanId = tokenParam.replace(/^\$/, '').toLowerCase()
 
   try {
-    // Redis'ten veriyi çek (lib/price.ts kullanır)
-    const data = await getPriceForToken(cleanId)
-    
-    return res.status(200).json(data)
+    // 1. Oracle'dan TÜM fiyatları çek (Cache olduğu için hızlıdır)
+    const response = await fetch(`${ORACLE_URL}/api/prices/get-all`, {
+        next: { revalidate: 30 } // 30 saniye cache
+    });
 
-  } catch (err: any) {
-    console.error('[/api/price] error:', err)
-    return res.status(500).json({ error: 'Internal Server Error' })
+    if (!response.ok) throw new Error("Oracle fetch failed");
+
+    const allPrices: any[] = await response.json();
+
+    // 2. İstenen token'ı bul (ID veya Symbol eşleşmesi)
+    const targetId = String(token).toLowerCase();
+    
+    // Virtual için özel kontrol
+    if (targetId === 'virtual') {
+        const vData = allPrices.find((p: any) => p.tokenId === 'virtual' || p.symbol === 'VIRTUAL');
+        if (vData) return res.status(200).json(vData);
+    }
+
+    const priceData = allPrices.find((p: any) => 
+        p.tokenId === targetId || p.symbol.toLowerCase() === targetId
+    );
+
+    if (priceData) {
+        return res.status(200).json(priceData);
+    } else {
+        // Bulunamazsa fallback
+        return res.status(200).json({ p0: 0, pLive: 0, pClose: 0, source: 'fallback' });
+    }
+
+  } catch (error) {
+    console.error("Price Bridge Error:", error);
+    return res.status(200).json({ p0: 0, pLive: 0, pClose: 0, source: 'error-fallback' });
   }
 }
