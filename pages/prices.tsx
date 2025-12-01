@@ -175,13 +175,13 @@ export default function PricesPage() {
           <a className="tab" href="/inventory">INVENTORY</a>
           <a className="tab" href="/leaderboard">LEADERBOARD</a>
           <a className="tab" href="/history">HISTORY</a>
-          {user && <a className="tab" href="/profile">PROFILE</a>}
+          <a className="tab" href="/profile">PROFILE</a>
         </nav>
-        <div style={{display: 'flex', alignItems: 'center', gap: 12, marginLeft: 'auto'}}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginLeft: 'auto' }}>
           <ThemeToggle />
-          <a 
-            href="https://x.com/fliproyale" 
-            target="_blank" 
+          <a
+            href="https://x.com/fliproyale"
+            target="_blank"
             rel="noopener noreferrer"
             style={{
               display: 'flex',
@@ -211,8 +211,8 @@ export default function PricesPage() {
             }}
             title="Follow us on X"
           >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" style={{display: 'block'}}>
-              <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" style={{ display: 'block' }}>
+              <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
             </svg>
           </a>
         </div>
@@ -221,7 +221,7 @@ export default function PricesPage() {
       <div className="panel">
         <div className="row">
           <h2>Live Token Prices</h2>
-          <div style={{display:'flex', alignItems:'center', gap:12}}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value as SortOption)}
@@ -240,17 +240,17 @@ export default function PricesPage() {
               <option value="price">Sort by Price</option>
             </select>
             <span className="badge" style={{
-              background:'rgba(59,130,246,0.2)',
-              borderColor:'rgba(59,130,246,0.3)',
-              color:'#bfdbfe',
-              fontSize:12
+              background: 'rgba(59,130,246,0.2)',
+              borderColor: 'rgba(59,130,246,0.3)',
+              color: '#bfdbfe',
+              fontSize: 12
             }}>
               Updated {updatedLabel}
             </span>
             <button
               className="btn"
               onClick={() => loadPrices(true)}
-              style={{padding:'8px 16px', fontSize:14}}
+              style={{ padding: '8px 16px', fontSize: 14 }}
             >
               Refresh
             </button>
@@ -259,41 +259,41 @@ export default function PricesPage() {
 
         {error && (
           <div style={{
-            marginTop:12,
-            padding:'12px 16px',
-            borderRadius:8,
-            background:'rgba(239,68,68,0.15)',
-            border:'1px solid rgba(239,68,68,0.35)',
-            color:'#fca5a5',
-            fontSize:13
+            marginTop: 12,
+            padding: '12px 16px',
+            borderRadius: 8,
+            background: 'rgba(239,68,68,0.15)',
+            border: '1px solid rgba(239,68,68,0.35)',
+            color: '#fca5a5',
+            fontSize: 13
           }}>
             {error}
           </div>
         )}
 
-        <div className="sep" style={{marginTop:loading ? 24 : 16}}></div>
+        <div className="sep" style={{ marginTop: loading ? 24 : 16 }}></div>
 
         {loading ? (
-          <div style={{textAlign:'center', padding:48, color:'var(--muted-inv)'}}>
+          <div style={{ textAlign: 'center', padding: 48, color: 'var(--muted-inv)' }}>
             Loading live prices...
           </div>
         ) : (
-          <div style={{display:'flex', flexDirection:'column', gap:12}}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             {/* Header row */}
             <div style={{
-              display:'grid',
-              gridTemplateColumns:'minmax(220px, 2fr) repeat(4, minmax(120px, 1fr)) 160px',
-              gap:16,
-              alignItems:'center',
-              padding:'12px 20px',
-              background:'rgba(255,255,255,0.06)',
-              borderRadius:12,
-              border:'1px solid rgba(255,255,255,0.1)',
-              fontWeight:700,
-              fontSize:13,
-              color:'rgba(255,255,255,0.9)',
-              textTransform:'uppercase',
-              letterSpacing:0.5
+              display: 'grid',
+              gridTemplateColumns: 'minmax(220px, 2fr) repeat(4, minmax(120px, 1fr)) 160px',
+              gap: 16,
+              alignItems: 'center',
+              padding: '12px 20px',
+              background: 'rgba(255,255,255,0.06)',
+              borderRadius: 12,
+              border: '1px solid rgba(255,255,255,0.1)',
+              fontWeight: 700,
+              fontSize: 13,
+              color: 'rgba(255,255,255,0.9)',
+              textTransform: 'uppercase',
+              letterSpacing: 0.5
             }}>
               <div>Token</div>
               <div>Price</div>
@@ -307,77 +307,77 @@ export default function PricesPage() {
               const positive = change >= 0
               return (
                 <div key={row.tokenId} className="price-row" style={{
-                  display:'grid',
-                  gridTemplateColumns:'minmax(220px, 2fr) repeat(4, minmax(120px, 1fr)) 160px',
-                  gap:16,
-                  alignItems:'center',
-                  background:'rgba(255,255,255,0.04)',
-                  borderRadius:14,
-                  padding:'16px 20px',
-                  border:'1px solid rgba(255,255,255,0.08)'
+                  display: 'grid',
+                  gridTemplateColumns: 'minmax(220px, 2fr) repeat(4, minmax(120px, 1fr)) 160px',
+                  gap: 16,
+                  alignItems: 'center',
+                  background: 'rgba(255,255,255,0.04)',
+                  borderRadius: 14,
+                  padding: '16px 20px',
+                  border: '1px solid rgba(255,255,255,0.08)'
                 }}>
-                  <div style={{display:'flex', alignItems:'center', gap:14}}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
                     <div style={{
-                      width:52,
-                      height:52,
-                      borderRadius:'50%',
-                      overflow:'hidden',
-                      border:'2px solid rgba(255,255,255,0.18)',
-                      boxShadow:'0 6px 16px rgba(0,0,0,0.25)',
-                      flexShrink:0
+                      width: 52,
+                      height: 52,
+                      borderRadius: '50%',
+                      overflow: 'hidden',
+                      border: '2px solid rgba(255,255,255,0.18)',
+                      boxShadow: '0 6px 16px rgba(0,0,0,0.25)',
+                      flexShrink: 0
                     }}>
                       <img
                         src={row.logo}
                         alt={row.symbol}
-                        style={{width:'100%', height:'100%', objectFit:'cover'}}
+                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                         onError={handleImageFallback}
                       />
                     </div>
                     <div>
-                      <div style={{fontSize:16, fontWeight:700, color:'white'}}>
+                      <div style={{ fontSize: 16, fontWeight: 700, color: 'white' }}>
                         {row.name}
                       </div>
-                      <div style={{fontSize:13, color:'rgba(255,255,255,0.7)'}}>
+                      <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.7)' }}>
                         ${row.symbol}
                       </div>
                     </div>
                   </div>
 
-                  <div style={{fontSize:16, fontWeight:700, color:'white'}}>
-                    {row.price != null ? `$${row.price.toLocaleString(undefined, {maximumFractionDigits: row.price >= 2 ? 2 : 6})}` : '—'}
+                  <div style={{ fontSize: 16, fontWeight: 700, color: 'white' }}>
+                    {row.price != null ? `$${row.price.toLocaleString(undefined, { maximumFractionDigits: row.price >= 2 ? 2 : 6 })}` : '—'}
                   </div>
 
                   <div style={{
-                    fontSize:16,
-                    fontWeight:700,
+                    fontSize: 16,
+                    fontWeight: 700,
                     color: positive ? '#86efac' : '#fca5a5'
                   }}>
                     {row.changePct != null ? `${positive ? '+' : ''}${row.changePct.toFixed(2)}%` : '—'}
                   </div>
 
-                  <div style={{fontSize:16, fontWeight:700, color:'white'}}>
+                  <div style={{ fontSize: 16, fontWeight: 700, color: 'white' }}>
                     {row.fdv != null ? `$${(row.fdv / 1_000_000).toFixed(2)}M` : '—'}
                   </div>
 
-                  <div style={{fontSize:13, color:'rgba(255,255,255,0.7)'}}>
-                    Baseline: {row.baseline != null ? `$${row.baseline.toLocaleString(undefined, {maximumFractionDigits: row.baseline >= 2 ? 2 : 6})}` : '—'}
+                  <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.7)' }}>
+                    Baseline: {row.baseline != null ? `$${row.baseline.toLocaleString(undefined, { maximumFractionDigits: row.baseline >= 2 ? 2 : 6 })}` : '—'}
                   </div>
 
-                  <div style={{display:'flex', flexDirection:'column', gap:6, fontSize:12}}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6, fontSize: 12 }}>
                     {row.dexscreenerUrl && (
                       <a
                         href={row.dexscreenerUrl}
                         target="_blank"
                         rel="noreferrer"
-                        style={{color:'#93c5fd', textDecoration:'underline'}}
+                        style={{ color: '#93c5fd', textDecoration: 'underline' }}
                       >
                         View on Dexscreener
                       </a>
                     )}
                     <div style={{
-                      display:'inline-flex',
-                      alignItems:'center',
-                      gap:6
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 6
                     }}>
                       <span
                         className="badge"
@@ -400,18 +400,18 @@ export default function PricesPage() {
                               : row.source === 'gecko'
                                 ? '#bfdbfe'
                                 : '#fca5a5',
-                          fontSize:11
+                          fontSize: 11
                         }}
                       >
                         {row.source === 'dexscreener' ? 'Dexscreener' : row.source === 'gecko' ? 'GeckoTerminal' : 'Fallback'}
                       </span>
                       {row.error && (
-                        <span style={{color:'#fca5a5'}}>
+                        <span style={{ color: '#fca5a5' }}>
                           {row.error}
                         </span>
                       )}
                       {row.dexNetwork && row.dexPair && (
-                        <span style={{color:'rgba(255,255,255,0.45)'}}>
+                        <span style={{ color: 'rgba(255,255,255,0.45)' }}>
                           {row.dexNetwork} · {row.dexPair.slice(0, 6)}…{row.dexPair.slice(-4)}
                         </span>
                       )}

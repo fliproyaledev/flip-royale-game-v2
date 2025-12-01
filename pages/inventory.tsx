@@ -11,35 +11,35 @@ function handleImageFallback(event: SyntheticEvent<HTMLImageElement>) {
   target.src = '/token-logos/placeholder.png'
 }
 
-export default function Inventory(){
-  const [inventory, setInventory] = useState<Record<string,number>>({})
+export default function Inventory() {
+  const [inventory, setInventory] = useState<Record<string, number>>({})
   const [user, setUser] = useState<any>(null)
 
-  useEffect(()=>{
+  useEffect(() => {
     async function load() {
-        const savedUser = localStorage.getItem('flipflop-user')
-        let userId = ''
-        if (savedUser) {
-            try {
-                const u = JSON.parse(savedUser)
-                setUser(u)
-                userId = u.id
-            } catch {}
-        }
-        
-        if (userId) {
-            try {
-                const r = await fetch(`/api/users/me?userId=${encodeURIComponent(userId)}`)
-                const j = await r.json()
-                if (j.ok && j.user) {
-                    setUser(j.user)
-                    if (j.user.inventory) setInventory(j.user.inventory)
-                }
-            } catch(e) { console.error(e) }
-        }
+      const savedUser = localStorage.getItem('flipflop-user')
+      let userId = ''
+      if (savedUser) {
+        try {
+          const u = JSON.parse(savedUser)
+          setUser(u)
+          userId = u.id
+        } catch { }
+      }
+
+      if (userId) {
+        try {
+          const r = await fetch(`/api/users/me?userId=${encodeURIComponent(userId)}`)
+          const j = await r.json()
+          if (j.ok && j.user) {
+            setUser(j.user)
+            if (j.user.inventory) setInventory(j.user.inventory)
+          }
+        } catch (e) { console.error(e) }
+      }
     }
     load()
-  },[])
+  }, [])
 
   return (
     <div className="app">
@@ -63,13 +63,13 @@ export default function Inventory(){
           <a className="tab active" href="/inventory">INVENTORY</a>
           <a className="tab" href="/leaderboard">LEADERBOARD</a>
           <a className="tab" href="/history">HISTORY</a>
-          {user && <a className="tab" href="/profile">PROFILE</a>}
+          <a className="tab" href="/profile">PROFILE</a>
         </nav>
-        <div style={{display: 'flex', alignItems: 'center', gap: 12, marginLeft: 'auto'}}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginLeft: 'auto' }}>
           <ThemeToggle />
-          <a 
-            href="https://x.com/fliproyale" 
-            target="_blank" 
+          <a
+            href="https://x.com/fliproyale"
+            target="_blank"
             rel="noopener noreferrer"
             style={{
               display: 'flex',
@@ -99,8 +99,8 @@ export default function Inventory(){
             }}
             title="Follow us on X"
           >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" style={{display: 'block'}}>
-              <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" style={{ display: 'block' }}>
+              <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
             </svg>
           </a>
         </div>
@@ -109,16 +109,16 @@ export default function Inventory(){
       <div className="panel">
         <h2>Token Collection</h2>
         <div className="sep"></div>
-        
+
         <div style={{
-          display:'grid',
-          gridTemplateColumns:'repeat(auto-fit, minmax(240px, 1fr))',
-          gap:16,
-          marginTop:20
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
+          gap: 16,
+          marginTop: 20
         }}>
-          {TOKENS.filter(t => (inventory[t.id] || 0) > 0).map((tok, index)=>{
+          {TOKENS.filter(t => (inventory[t.id] || 0) > 0).map((tok, index) => {
             const count = inventory[tok.id] || 0
-            
+
             // Color palette inspired by trading card gradients
             const colors = [
               'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', // Purple to indigo
@@ -133,38 +133,38 @@ export default function Inventory(){
               'linear-gradient(135deg, #a18cd1 0%, #fbc2eb 100%)', // Lavender to pink
               'linear-gradient(135deg, #fad0c4 0%, #ffd1ff 100%)', // Apricot to lilac
             ]
-            
+
             const rarity = index < 3 ? 'C' : index < 7 ? 'U' : 'R' // Common, Uncommon, Rare
             const rarityColor = rarity === 'C' ? '#6b7280' : rarity === 'U' ? '#3b82f6' : '#f59e0b'
-            
+
             return (
-                             <div key={tok.id} style={{
-                 background: colors[index % colors.length],
-                 borderRadius: 20,
-                 padding: 24,
-                 position: 'relative',
-                                   minHeight: 280,
-                 display: 'flex',
-                 flexDirection: 'column',
-                 justifyContent: 'space-between',
-                 border: '2px solid rgba(255,255,255,0.15)',
-                 boxShadow: '0 12px 40px rgba(0,0,0,0.15), 0 4px 20px rgba(0,0,0,0.1)',
-                 transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
-                 transform: 'translateY(0)',
-                 cursor: 'pointer'
-               }}
-               onMouseEnter={(e) => {
-                 e.currentTarget.style.transform = 'translateY(-8px) scale(1.02)';
-                 e.currentTarget.style.boxShadow = '0 20px 60px rgba(0,0,0,0.25), 0 8px 30px rgba(0,0,0,0.15)';
-                 e.currentTarget.style.border = '2px solid rgba(255,255,255,0.3)';
-               }}
-               onMouseLeave={(e) => {
-                 e.currentTarget.style.transform = 'translateY(0)';
-                 e.currentTarget.style.boxShadow = '0 12px 40px rgba(0,0,0,0.15), 0 4px 20px rgba(0,0,0,0.1)';
-                 e.currentTarget.style.border = '2px solid rgba(255,255,255,0.15)';
-               }}>
-                                                   
-                
+              <div key={tok.id} style={{
+                background: colors[index % colors.length],
+                borderRadius: 20,
+                padding: 24,
+                position: 'relative',
+                minHeight: 280,
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'space-between',
+                border: '2px solid rgba(255,255,255,0.15)',
+                boxShadow: '0 12px 40px rgba(0,0,0,0.15), 0 4px 20px rgba(0,0,0,0.1)',
+                transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
+                transform: 'translateY(0)',
+                cursor: 'pointer'
+              }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.transform = 'translateY(-8px) scale(1.02)';
+                  e.currentTarget.style.boxShadow = '0 20px 60px rgba(0,0,0,0.25), 0 8px 30px rgba(0,0,0,0.15)';
+                  e.currentTarget.style.border = '2px solid rgba(255,255,255,0.3)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = 'translateY(0)';
+                  e.currentTarget.style.boxShadow = '0 12px 40px rgba(0,0,0,0.15), 0 4px 20px rgba(0,0,0,0.1)';
+                  e.currentTarget.style.border = '2px solid rgba(255,255,255,0.15)';
+                }}>
+
+
                 {/* Rarity badge */}
                 <div style={{
                   position: 'absolute',
@@ -183,7 +183,7 @@ export default function Inventory(){
                 }}>
                   {rarity}
                 </div>
-                
+
                 {/* Token logo */}
                 <div style={{
                   display: 'flex',
@@ -192,7 +192,7 @@ export default function Inventory(){
                   flex: 1,
                   marginTop: 16
                 }}>
-                                                       <div style={{
+                  <div style={{
                     width: 120,
                     height: 120,
                     background: 'rgba(255,255,255,0.12)',
@@ -218,10 +218,10 @@ export default function Inventory(){
                       borderRadius: '50%',
                       filter: 'blur(20px)'
                     }} />
-                    
-                    <img 
-                      src={tok.logo} 
-                      alt={tok.symbol} 
+
+                    <img
+                      src={tok.logo}
+                      alt={tok.symbol}
                       style={{
                         width: 100,
                         height: 100,
@@ -236,9 +236,9 @@ export default function Inventory(){
                     />
                   </div>
                 </div>
-                
+
                 {/* Token info */}
-                <div style={{textAlign: 'center', marginTop: 16}}>
+                <div style={{ textAlign: 'center', marginTop: 16 }}>
                   <div style={{
                     fontSize: 18,
                     fontWeight: 900,

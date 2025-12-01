@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react'
 import ThemeToggle from '../components/ThemeToggle'
 
-export default function Guide(){
+export default function Guide() {
   const [user, setUser] = useState<any>(null)
-  useEffect(()=>{ try { const s = localStorage.getItem('flipflop-user'); if (s) setUser(JSON.parse(s)) } catch {}
+  useEffect(() => {
+    try { const s = localStorage.getItem('flipflop-user'); if (s) setUser(JSON.parse(s)) } catch { }
   }, [])
   return (
     <div className="app">
@@ -27,13 +28,13 @@ export default function Guide(){
           <a className="tab" href="/inventory">INVENTORY</a>
           <a className="tab" href="/leaderboard">LEADERBOARD</a>
           <a className="tab" href="/history">HISTORY</a>
-          {user && <a className="tab" href="/profile">PROFILE</a>}
+          <a className="tab" href="/profile">PROFILE</a>
         </nav>
-        <div style={{display: 'flex', alignItems: 'center', gap: 12, marginLeft: 'auto'}}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginLeft: 'auto' }}>
           <ThemeToggle />
-          <a 
-            href="https://x.com/fliproyale" 
-            target="_blank" 
+          <a
+            href="https://x.com/fliproyale"
+            target="_blank"
             rel="noopener noreferrer"
             style={{
               display: 'flex',
@@ -63,17 +64,17 @@ export default function Guide(){
             }}
             title="Follow us on X"
           >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" style={{display: 'block'}}>
-              <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" style={{ display: 'block' }}>
+              <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
             </svg>
           </a>
         </div>
       </header>
 
-      <div className="panel" style={{maxWidth:900}}>
+      <div className="panel" style={{ maxWidth: 900 }}>
         <h2>🎮 How to Play FLIP ROYALE</h2>
         <div className="sep"></div>
-        
+
         <h3>Getting Started</h3>
         <ul>
           <li><b>Create Your Profile</b>: Go to the PLAY page, register with a username and wallet address. New players start with <b>10,000 gift points</b> (for packs & Arena Royale rooms only).</li>
