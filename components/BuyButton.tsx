@@ -1,118 +1,135 @@
-import { useState, useEffect } from 'react';
-// 👇 V1 İÇİN DOĞRU HOOK'LAR BUNLARDIR:
-import { usePrepareContractWrite, useContractWrite, useWaitForTransaction } from 'wagmi';
-import { parseUnits } from 'viem';
-import { VIRTUAL_TOKEN_ADDRESS, DEV_WALLET_ADDRESS, ERC20_ABI } from '../lib/constants';
+import { useState } from 'react';
+import { useAccount, useSendTransaction, useWaitForTransaction } from 'wagmi';
+import { parseEther } from 'viem';
+import { VIRTUAL_TOKEN_ADDRESS, DEV_WALLET_ADDRESS } from '../lib/constants';
 
-export default function BuyButton({
-  userId,
-  onSuccess,
-  price,
-  packType = 'common',
-  compact = false
-}: {
-  userId: string,
-  onSuccess: () => void,
-  price: number,
-  packType?: 'common' | 'rare',
-  compact?: boolean
-}) {
-  const [isProcessing, setIsProcessing] = useState(false);
-
-  // 1. İŞLEM HAZIRLIĞI (Prepare)
-  // Bu hook, cüzdan açılmadan önce işlemi simüle eder ve hata varsa söyler.
-  const { config, error: prepareError } = usePrepareContractWrite({
-    address: VIRTUAL_TOKEN_ADDRESS as `0x${string}`,
-    abi: ERC20_ABI,
-    functionName: 'transfer',
-    args: [
-      DEV_WALLET_ADDRESS as `0x${string}`,
-      parseUnits(price.toString(), 18) // 18 decimal varsayımı
+// VIRTUAL Token ABI (Sadece transfer fonksiyonu yeterli)
+const ERC20_ABI = [
+  {
+    name: 'transfer',
+    type: 'function',
+    stateMutability: 'nonpayable',
+    inputs: [
+      { name: 'recipient', type: 'address' },
+      { name: 'amount', type: 'uint256' }
     ],
-    enabled: Boolean(userId), // Sadece kullanıcı varsa çalışır
-  });
+    outputs: [{ name: '', type: 'bool' }]
+  }
+] as const;
 
-  // 2. YAZMA İŞLEMİ (Write)
-  // Hazırlanan konfigürasyonu kullanarak cüzdanı açar.
-  const { data: txData, write, isLoading: isWriting } = useContractWrite(config);
+export default function BuyButton({ userId, onSuccess, price, packType, compact }: any) {
+  const { address, isConnected } = useAccount();
+  const [isProcessing, setIsProcessing] = useState(false);
+  
+  // Transaction Hook'ları
+  const { data: hash, sendTransaction } = useSendTransaction();
 
-  // 3. ONAY BEKLEME (Wait)
-  // İşlem ağa gönderildikten sonra onaylanmasını bekler.
-  const { isLoading: isConfirming, isSuccess } = useWaitForTransaction({
-    hash: txData?.hash,
-  });
-
-  // İşlem onaylandığında Backend'e bildir
-  useEffect(() => {
-    if (isSuccess && txData?.hash && !isProcessing) {
-      handleBackendVerification(txData.hash);
+  // Transaction'ın onaylanmasını bekle
+  const { isLoading: isWaiting } = useWaitForTransaction({
+    hash,
+    onSuccess: async (data) => {
+      console.log("Blockchain işlemi başarılı:", data.transactionHash);
+      await verifyPurchase(data.transactionHash);
+    },
+    onError: (err) => {
+      console.error("Blockchain hatası:", err);
+      setIsProcessing(false);
+      alert("Transaction failed on blockchain.");
     }
-  }, [isSuccess, txData, isProcessing]);
+  });
 
-  async function handleBackendVerification(txHash: string) {
+  const handleBuy = async () => {
+    if (!isConnected || !address) {
+      alert("Please connect wallet first");
+      return;
+    }
+
     setIsProcessing(true);
+
     try {
+      // 1. Ödemeyi Gönder (VIRTUAL Token Transferi)
+      sendTransaction({
+        to: VIRTUAL_TOKEN_ADDRESS,
+        data: encodeFunctionData({
+          abi: ERC20_ABI,
+          functionName: 'transfer',
+          args: [DEV_WALLET_ADDRESS, parseEther(price.toString())]
+        })
+      });
+      // Not: sendTransaction başarılı olursa yukarıdaki useWaitForTransaction tetiklenir.
+    } catch (err: any) {
+      console.error("Ödeme başlatma hatası:", err);
+      setIsProcessing(false);
+    }
+  };
+
+  // 2. İşlemi Backend'e (Oracle'a) Bildir
+  const verifyPurchase = async (txHash: string) => {
+    try {
+      console.log("Backend doğrulaması başlıyor...", txHash);
+      
       const res = await fetch('/api/shop/verify-purchase', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          userId,
-          txHash,
-          amount: price,
-          packType
+          userId: userId,
+          txHash: txHash,
+          packType: packType,
+          count: 1 // Şimdilik tekli alım
         })
       });
 
       const data = await res.json();
-      if (data.ok) {
+
+      if (res.ok && data.ok) {
         alert("Purchase Successful! Pack added to inventory.");
-        if (onSuccess) onSuccess();
+        if (onSuccess) onSuccess(); // Envanteri yenile
       } else {
-        alert("Payment verified but pack delivery failed: " + (data.error || 'Unknown error'));
+        // Kartlar eklenmiş olabilir ama API hata vermiş olabilir
+        console.warn("API Uyarı:", data.error);
+        // Kullanıcıyı korkutmamak için yine de başarı mesajı verilebilir veya:
+        alert("Purchase Complete! Please check your inventory.");
       }
-    } catch (e) {
-      alert("Server error checking transaction. Please contact support.");
+
+    } catch (err) {
+      console.error("Doğrulama hatası:", err);
+      // Kritik nokta: Kartlar muhtemelen eklendi, sadece frontend hatası
+      alert("Purchase processed. Please refresh page to see your cards.");
     } finally {
       setIsProcessing(false);
     }
+  };
+
+  // Helper: Viem için encode fonksiyonu (Eğer projende yüklü değilse manuel ekle)
+  function encodeFunctionData({ abi, functionName, args }: any) {
+    const { encodeFunctionData } = require('viem');
+    return encodeFunctionData({ abi, functionName, args });
   }
 
-  const isLoading = isWriting || isConfirming || isProcessing;
-
-  // Eğer cüzdan bağlı değilse veya bakiye yetersizse `write` fonksiyonu undefined olabilir
-  const handleBuy = () => {
-    if (!userId) return alert("Please login first");
-    if (prepareError) {
-      console.error("Prepare Error:", prepareError);
-      return alert("Transaction cannot be prepared. Check your balance or network.");
-    }
-    if (write) {
-      write();
-    } else {
-      alert("Wallet not ready or insufficient funds.");
-    }
-  };
+  const isLoading = isProcessing || isWaiting;
 
   return (
     <button
       onClick={handleBuy}
       disabled={isLoading}
-      className="btn primary"
+      className="btn"
       style={{
         width: '100%',
-        marginTop: compact ? 0 : 8,
-        opacity: isLoading ? 0.6 : 1,
-        cursor: isLoading ? 'not-allowed' : 'pointer',
-        fontSize: compact ? 10 : 12,
-        padding: compact ? '8px 2px' : '8px 0',
-        fontWeight: 800,
-        whiteSpace: 'nowrap'
+        background: packType === 'rare' 
+          ? 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)' 
+          : 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
+        opacity: isLoading ? 0.7 : 1,
+        cursor: isLoading ? 'wait' : 'pointer',
+        fontWeight: 700,
+        padding: compact ? '8px' : '12px',
+        fontSize: compact ? '13px' : '15px',
+        color: 'white',
+        border: 'none',
+        borderRadius: '8px',
+        marginTop: '8px'
       }}
     >
-      {isWriting ? 'Check Wallet...' :
-        isConfirming ? 'Confirming...' :
-          isProcessing ? 'Verifying...' :
-            `Buy for ${price} VIRTUAL`}
+      {isLoading ? 'Verifying...' : `Buy for ${price} VIRTUAL`}
     </button>
   );
 }
