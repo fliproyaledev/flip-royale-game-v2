@@ -2220,7 +2220,8 @@ export default function Home() {
                     </div>
                   ) : (
                     <>
-                      <button onClick={saveNextRoundPicks} className="btn" style={{
+                      type="button"  // <--- İŞTE BU ÇOK KRİTİK!
+    onClick={(e) => saveNextRoundPicks(e)} className="btn" style={{
                         background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
                         border: '2px solid rgba(16, 185, 129, 0.5)',
                         color: 'white', fontSize: 16, fontWeight: 700,
