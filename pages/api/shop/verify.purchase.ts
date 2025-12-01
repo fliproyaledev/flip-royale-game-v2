@@ -1,69 +1,66 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { createPublicClient, http, parseUnits } from 'viem';
-import { base } from '@/lib/wagmi';
-import { loadUsers, saveUsers } from '@/lib/users';
-import { VIRTUAL_TOKEN_ADDRESS, DEV_WALLET_ADDRESS } from '@/lib/constants';
 
-// Base ağına bağlanmak için istemci
-const publicClient = createPublicClient({
-  chain: base,
-  transport: http()
-});
+// Ortam değişkenlerini alıyoruz
+const ORACLE_URL = process.env.ORACLE_URL;
+const ORACLE_SECRET = process.env.ORACLE_SECRET;
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+  // 1. Sadece POST İsteği
+  if (req.method !== 'POST') {
+    return res.status(405).json({ ok: false, error: 'Method not allowed' });
+  }
 
-  const { userId, txHash, amount } = req.body;
-
-  if (!userId || !txHash || !amount) {
-    return res.status(400).json({ error: 'Missing parameters' });
+  // 2. Oracle Ayarlarını Kontrol Et
+  if (!ORACLE_URL || !ORACLE_SECRET) {
+    console.error("❌ ORACLE ayarları eksik!");
+    return res.status(500).json({ ok: false, error: 'Server configuration error' });
   }
 
   try {
-    // 1. İşlemi Blockchain'den Sorgula
-    const tx = await publicClient.getTransactionReceipt({ hash: txHash as `0x${string}` });
+    // 3. Frontend'den Gelen Verileri Al
+    const { userId, txHash, packType, count } = req.body;
 
-    if (tx.status !== 'success') {
-      return res.status(400).json({ error: 'Transaction failed on-chain' });
+    if (!userId || !txHash) {
+      return res.status(400).json({ ok: false, error: 'Missing userId or txHash' });
     }
 
-    // 2. İşlem detaylarını kontrol et (Güvenlik)
-    // Logları analiz edip paranın gerçekten bizim cüzdana geldiğini,
-    // ve doğru miktarda geldiğini kontrol etmeliyiz.
-    // (Basitlik için şimdilik sadece success durumuna bakıyoruz, 
-    // ama prodüksiyonda "Logs" içindeki transfer eventini parse etmek en güvenlisidir.)
+    console.log(`Processing Crypto Purchase: ${txHash} for user ${userId}`);
 
-    // 3. Kullanıcıya Paketi Ver
-    const users = await loadUsers();
-    const user = users[userId];
-
-    if (!user) return res.status(404).json({ error: 'User not found' });
-
-    // Daha önce bu hash kullanıldı mı? (Replay Attack Koruması)
-    // Bunu yapmak için user.logs içinde bu hash var mı bakabiliriz.
-    const alreadyProcessed = user.logs.some(l => l.note?.includes(txHash));
-    if (alreadyProcessed) {
-      return res.status(400).json({ error: 'Transaction already processed' });
-    }
-
-    // Paketi ekle (Örn: 5 kart)
-    // Inventory mantığına göre burayı düzenle. Şimdilik rastgele kart ekliyoruz varsayalım.
-    // user.inventory['card_id'] = (user.inventory['card_id'] || 0) + 1;
-
-    // Kayıt at
-    user.logs.push({
-      date: new Date().toISOString().split('T')[0],
-      type: 'system',
-      note: `Pack Purchased with VIRTUAL (Tx: ${txHash})`,
-      bonusGranted: 0
+    // 4. İsteği ORACLE'a Yönlendir (Köprü)
+    // "paymentMethod: CRYPTO" diyerek Oracle'ın puan düşmesini engelliyoruz.
+    const oracleRes = await fetch(`${ORACLE_URL}/api/users/purchase`, {
+        method: 'POST',
+        headers: {
+            'Authorization': `Bearer ${ORACLE_SECRET}`,
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            userId: userId.toLowerCase(), // ID'yi normalize et
+            packType: packType || 'common',
+            count: count || 1,
+            useInventory: false,
+            paymentMethod: 'CRYPTO', // <--- Bu çok önemli, Oracle bunu görünce puan düşmez
+            txHash: txHash
+        })
     });
 
-    await saveUsers(users);
+    // 5. Oracle Yanıtını İşle
+    const data = await oracleRes.json();
 
-    return res.status(200).json({ ok: true });
+    if (!oracleRes.ok) {
+        console.error("Oracle Purchase Failed:", data);
+        // Hata mesajını frontend'e ilet
+        return res.status(oracleRes.status).json({ 
+            ok: false, 
+            error: data.error || 'Verification failed with Oracle' 
+        });
+    }
+
+    // 6. Başarılı!
+    return res.status(200).json({ ok: true, ...data });
 
   } catch (error: any) {
-    console.error(error);
-    return res.status(500).json({ error: 'Verification failed' });
+    console.error("Verify Purchase Bridge Error:", error);
+    return res.status(500).json({ ok: false, error: "Internal Server Error" });
   }
 }
