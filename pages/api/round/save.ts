@@ -3,23 +3,26 @@ import { loadUsers, saveUsers } from "../../../lib/users";
 import { verifyUserSignature } from "../../../lib/verify";
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-// 🔍 DEBUG: Hangi metodun geldiğini görelim
-  console.log(`📡 Gelen İstek Metodu: ${req.method}`);
+  // 🔍 DEBUG: Gelen isteğin metodunu logla
+  console.log(`📡 [API] Gelen İstek Metodu: ${req.method}`);
 
-  // CORS Preflight (OPTIONS) isteklerine izin ver (Bazı tarayıcılar önce bunu sorar)
+  // 1. CORS Preflight (OPTIONS) isteklerine izin ver
+  // Tarayıcılar POST atmadan önce "Atabilir miyim?" diye sorar.
   if (req.method === "OPTIONS") {
      return res.status(200).end();
-  }  
-// Sadece POST isteğine izin ver
+  }
+
+  // 2. Sadece POST isteğine izin ver
   if (req.method !== "POST") {
-    // Hatanın içinde ne geldiğini de yazdıralım ki sebebi anlayalım
+    console.warn(`⚠️ [API] Method Not Allowed. Gelen: ${req.method}`);
     return res.status(405).json({ 
         ok: false, 
         error: `Method not allowed. Beklenen: POST, Gelen: ${req.method}` 
     });
   }
+
   try {
-    // 2. Verileri Al
+    // 3. Verileri Al
     const { userId, nextRound, activeRound, currentRound, signature, message } = req.body;
 
     if (!userId) {
@@ -39,7 +42,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(400).json({ ok: false, error: "Invalid message format." });
     }
 
-    // C. İmza Doğrulama
+    // C. İmza Doğrulama (Signature Verification)
     const isValid = await verifyUserSignature(userId, message, signature);
 
     if (!isValid) {
@@ -47,14 +50,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(403).json({ ok: false, error: "Invalid signature! You are not authorized to modify this account." });
     }
 
-    // 3. Kullanıcıyı Yükle
+    // 4. Kullanıcıyı Yükle
     const users = await loadUsers();
     
     // 🛠️ FIX: Büyük/Küçük Harf duyarlılığını ortadan kaldırıyoruz.
     const normalizedUserId = userId.toLowerCase(); 
     const user = users[normalizedUserId];
 
-    // 🕵️ DEBUG LOGLARI
+    // 🕵️ DEBUG LOGLARI (VERCEL HATASI İÇİN)
     if (!user) {
         console.log("------------------------------------------------");
         console.log("🚨 [DEBUG] HATA: Kullanıcı Bulunamadı!");
@@ -68,6 +71,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             console.log(`🔍 Örnek Mevcut ID'ler: ${existingKeys.slice(0, 5).join(', ')}`);
         } else {
             console.log("⚠️ Veritabanı (users objesi) tamamen BOŞ dönüyor!");
+            console.log("⚠️ UYARI: Vercel'de JSON dosyası kullanıyorsanız, veriler silinmiş olabilir.");
         }
         console.log("------------------------------------------------");
 
@@ -77,7 +81,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         });
     }
 
-    // 4. Verileri Güncelle
+    // 5. Verileri Güncelle
     let updated = false;
 
     if (nextRound !== undefined) {
@@ -86,6 +90,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     if (activeRound !== undefined) {
+      // Active round güncellemesi (genellikle Lock işlemi için)
       user.activeRound = activeRound;
       updated = true;
     }
@@ -98,10 +103,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     if (updated) {
         user.updatedAt = new Date().toISOString();
         
-        // 5. Kaydet
+        // 6. Kaydet
         await saveUsers(users);
-        // HATA DÜZELTİLDİ: user.username yerine user.name kullanıldı (veya sadece ID)
-        // TypeScript hatasını önlemek için güvenli erişim yapıyoruz
+        
+        // Güvenli Loglama (TypeScript hatasını önlemek için 'any' cast yapıyoruz)
         const userNameLog = (user as any).name || (user as any).username || normalizedUserId;
         console.log(`✅ [Game] Success: Data saved for ${userNameLog}`);
     } else {
@@ -115,4 +120,3 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(500).json({ ok: false, error: err.message || "Internal Server Error" });
   }
 }
-
