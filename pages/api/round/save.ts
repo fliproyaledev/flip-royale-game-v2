@@ -3,11 +3,21 @@ import { loadUsers, saveUsers } from "../../../lib/users";
 import { verifyUserSignature } from "../../../lib/verify";
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  // 1. Method Kontrolü
-  if (req.method !== "POST") {
-    return res.status(405).json({ ok: false, error: "Method not allowed" });
-  }
+// 🔍 DEBUG: Hangi metodun geldiğini görelim
+  console.log(`📡 Gelen İstek Metodu: ${req.method}`);
 
+  // CORS Preflight (OPTIONS) isteklerine izin ver (Bazı tarayıcılar önce bunu sorar)
+  if (req.method === "OPTIONS") {
+     return res.status(200).end();
+  }  
+// Sadece POST isteğine izin ver
+  if (req.method !== "POST") {
+    // Hatanın içinde ne geldiğini de yazdıralım ki sebebi anlayalım
+    return res.status(405).json({ 
+        ok: false, 
+        error: `Method not allowed. Beklenen: POST, Gelen: ${req.method}` 
+    });
+  }
   try {
     // 2. Verileri Al
     const { userId, nextRound, activeRound, currentRound, signature, message } = req.body;
@@ -105,3 +115,4 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(500).json({ ok: false, error: err.message || "Internal Server Error" });
   }
 }
+
