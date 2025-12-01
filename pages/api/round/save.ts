@@ -1,5 +1,4 @@
 import type { NextApiRequest, NextApiResponse } from "next";
-// ARTIK loadUsers YOK, getUser ve updateUser VAR
 import { getUser, updateUser } from "../../../lib/users"; 
 import { verifyUserSignature } from "../../../lib/verify";
 
@@ -43,7 +42,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     // 4. Kullanıcıyı ORACLE'dan Yükle
-    // (Eski kodda loadUsers() vardı, şimdi tek kullanıcı çekiyoruz)
     const normalizedUserId = userId.toLowerCase();
     
     // Köprü üzerinden Oracle'a soruyoruz
@@ -58,7 +56,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     // 5. Güncellenecek Verileri Hazırla
-    // Tüm kullanıcıyı değil, sadece değişenleri gönderiyoruz
     const updates: any = {};
     let hasChanges = false;
 
@@ -79,13 +76,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     // 6. Oracle'a Kaydet
     if (hasChanges) {
-        // Tarihi güncelle
         updates.updatedAt = new Date().toISOString();
         
-        // Oracle'a güncelleme isteği at
         await updateUser(normalizedUserId, updates);
         
-        const userNameLog = user.name || user.username || normalizedUserId;
+        // HATA DÜZELTİLDİ: TypeScript'i (user as any) ile susturuyoruz
+        const userNameLog = user.name || (user as any).username || normalizedUserId;
         console.log(`✅ [Game] Data synced to Oracle for ${userNameLog}`);
     } else {
         console.log(`ℹ️ [Game] No changes detected for ${normalizedUserId}`);
