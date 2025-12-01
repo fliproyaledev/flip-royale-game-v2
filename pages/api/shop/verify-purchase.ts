@@ -1,33 +1,21 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 
-// Ortam değişkenlerini alıyoruz
 const ORACLE_URL = process.env.ORACLE_URL;
 const ORACLE_SECRET = process.env.ORACLE_SECRET;
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  // 1. Sadece POST İsteği
-  if (req.method !== 'POST') {
-    return res.status(405).json({ ok: false, error: 'Method not allowed' });
-  }
-
-  // 2. Oracle Ayarlarını Kontrol Et
-  if (!ORACLE_URL || !ORACLE_SECRET) {
-    console.error("❌ ORACLE ayarları eksik!");
-    return res.status(500).json({ ok: false, error: 'Server configuration error' });
-  }
+  // 1. Sadece POST
+  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
   try {
-    // 3. Frontend'den Gelen Verileri Al
     const { userId, txHash, packType, count } = req.body;
 
     if (!userId || !txHash) {
-      return res.status(400).json({ ok: false, error: 'Missing userId or txHash' });
+        return res.status(400).json({ ok: false, error: 'Missing parameters' });
     }
 
-    console.log(`Processing Crypto Purchase: ${txHash} for user ${userId}`);
-
-    // 4. İsteği ORACLE'a Yönlendir (Köprü)
-    // "paymentMethod: CRYPTO" diyerek Oracle'ın puan düşmesini engelliyoruz.
+    // 2. İsteği ORACLE'a Yönlendir (Köprü)
+    // Yerel veritabanı (loadUsers) KULLANMIYORUZ. Direkt Oracle'a soruyoruz.
     const oracleRes = await fetch(`${ORACLE_URL}/api/users/purchase`, {
         method: 'POST',
         headers: {
@@ -35,32 +23,27 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-            userId: userId.toLowerCase(), // ID'yi normalize et
+            userId: userId.toLowerCase(),
             packType: packType || 'common',
             count: count || 1,
             useInventory: false,
-            paymentMethod: 'CRYPTO', // <--- Bu çok önemli, Oracle bunu görünce puan düşmez
+            paymentMethod: 'CRYPTO', // <--- Puan düşmemesi için
             txHash: txHash
         })
     });
 
-    // 5. Oracle Yanıtını İşle
     const data = await oracleRes.json();
 
     if (!oracleRes.ok) {
-        console.error("Oracle Purchase Failed:", data);
-        // Hata mesajını frontend'e ilet
-        return res.status(oracleRes.status).json({ 
-            ok: false, 
-            error: data.error || 'Verification failed with Oracle' 
-        });
+        // Oracle hata verdiyse (User not found vb.)
+        return res.status(oracleRes.status).json({ ok: false, error: data.error });
     }
 
-    // 6. Başarılı!
+    // 3. Başarılı
     return res.status(200).json({ ok: true, ...data });
 
   } catch (error: any) {
-    console.error("Verify Purchase Bridge Error:", error);
+    console.error("Bridge Error:", error);
     return res.status(500).json({ ok: false, error: "Internal Server Error" });
   }
 }
