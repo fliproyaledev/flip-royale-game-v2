@@ -1223,7 +1223,7 @@ export default function Home() {
           body: JSON.stringify({
             userId: user.id,
             nextRound: dataToSave,
-            signature: signature // <--- İMZAYI EKLİYORUZ
+            signature: signature, // <--- İMZAYI EKLİYORUZ
             message: messageToSign            
           })
         }).then(r => r.json()).then(d => {
@@ -1389,7 +1389,7 @@ export default function Home() {
             body: JSON.stringify({
               userId: user.id,
               activeRound: newActive,
-              signature: signature
+              signature: signature,
               message: messageToSign              
             })
           })
