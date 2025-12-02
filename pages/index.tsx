@@ -224,7 +224,9 @@ export default function Home() {
       console.log("Register API response:", data)
 
       if (data.ok) {
-        loginUser(data.user, data.isNewUser) // Pass isNewUser flag
+        // Treat explicit registration as a brand new user
+        // Backend may or may not send isNewUser flag, so we force true here
+        loginUser(data.user, true)
         setIsRegistering(false)
       } else {
         setRegError(data.error || 'Registration failed')
@@ -2828,8 +2830,8 @@ async function saveNextRoundPicks(e?: any) {
                   boxShadow: '0 4px 12px rgba(16, 185, 129, 0.3)'
                 }}
               >
-                Open My Gift!</button>
-                
+                Open My Gift!
+              </button>
             
             </div>
           </div>
