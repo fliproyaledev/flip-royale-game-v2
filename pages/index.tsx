@@ -2828,7 +2828,8 @@ async function saveNextRoundPicks(e?: any) {
                   boxShadow: '0 4px 12px rgba(16, 185, 129, 0.3)'
                 }}
               >
-                Open My Gift!
+                Open My Gift!</button>
+                
             
             </div>
           </div>
